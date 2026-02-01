@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene, gl } = useThree();
-  const { revealCell, toggleFlag, size, grid, settings } = useGameStore();
+  const { revealCell, toggleFlag, size, grid, settings, status } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -22,6 +22,13 @@ function PlayerController() {
   
   // Camera State
   const euler = useRef(new Euler(0, 0, 0, 'YXZ'));
+
+  // Unlock mouse on Game Over
+  useEffect(() => {
+    if (status === 'won' || status === 'lost') {
+      document.exitPointerLock();
+    }
+  }, [status]);
 
   useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
@@ -51,7 +58,7 @@ function PlayerController() {
     };
     
     const onClick = () => {
-        if (!isLocked.current) {
+        if (!isLocked.current && status === 'playing') {
             gl.domElement.requestPointerLock();
         }
     };
