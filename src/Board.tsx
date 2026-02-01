@@ -7,52 +7,70 @@ import { createNumberAtlas } from './textures';
 const o = new Object3D();
 
 export function Board() {
-  const { grid, size, explodedMine } = useGameStore();
+  const { grid, size, explodedMine, status } = useGameStore();
   
-  // Refs for the three main layers
+  // Refs for the layers
   const hiddenMesh = useRef<InstancedMesh>(null);
   const revealedMesh = useRef<InstancedMesh>(null);
   const flagMesh = useRef<InstancedMesh>(null);
+  const missedMineMesh = useRef<InstancedMesh>(null);
+  const incorrectFlagMesh = useRef<InstancedMesh>(null);
 
   // Generate textures once
   const numberAtlas = useMemo(() => createNumberAtlas(), []);
   
   // Create Bevelled Geometry
   const bevelGeom = useMemo(() => {
-      // Size 0.96 to leave a small gap
-      // Radius 0.05 for a nice bevel
-      // Smoothness 2 is enough for low poly look
       return new RoundedBoxGeometry(0.96, 0.96, 0.96, 2, 0.05);
   }, []);
 
   useLayoutEffect(() => {
-    if (!hiddenMesh.current || !revealedMesh.current || !flagMesh.current) return;
+    if (!hiddenMesh.current || !revealedMesh.current || !flagMesh.current || !missedMineMesh.current || !incorrectFlagMesh.current) return;
 
     let hiddenCount = 0;
     let revealedCount = 0;
     let flagCount = 0;
+    let missedCount = 0;
+    let incorrectCount = 0;
 
     grid.forEach((cell) => {
-      // Logic for positioning
+      o.position.set(cell.x, 0, cell.z);
+      o.updateMatrix();
+
       if (cell.isRevealed) {
-        // Revealed: It's a floor tile
-        o.position.set(cell.x, 0, cell.z);
-        o.scale.set(1, 0.1, 1); // Thin tile
-        o.updateMatrix();
-        revealedMesh.current!.setMatrixAt(revealedCount, o.matrix);
-        revealedCount++;
+        if (!cell.isMine) {
+            o.position.set(cell.x, 0, cell.z);
+            o.scale.set(1, 0.1, 1);
+            o.updateMatrix();
+            revealedMesh.current!.setMatrixAt(revealedCount, o.matrix);
+            revealedCount++;
+        }
       } else {
-        // Hidden or Flagged: It's a Wall
-        o.position.set(cell.x, 0.5, cell.z); // Center is 0.5 up
-        o.scale.set(1, 1, 1); // Full block
+        // Position Wall
+        o.position.set(cell.x, 0.5, cell.z);
+        o.scale.set(1, 1, 1);
         o.updateMatrix();
         
         if (cell.isFlagged) {
-          flagMesh.current!.setMatrixAt(flagCount, o.matrix);
-          flagCount++;
+          if (status === 'lost' && !cell.isMine) {
+            // Incorrect Flag
+            incorrectFlagMesh.current!.setMatrixAt(incorrectCount, o.matrix);
+            incorrectCount++;
+          } else {
+            // Correct Flag (or playing)
+            flagMesh.current!.setMatrixAt(flagCount, o.matrix);
+            flagCount++;
+          }
         } else {
-          hiddenMesh.current!.setMatrixAt(hiddenCount, o.matrix);
-          hiddenCount++;
+          if (status === 'lost' && cell.isMine) {
+            // Missed Mine
+            missedMineMesh.current!.setMatrixAt(missedCount, o.matrix);
+            missedCount++;
+          } else {
+            // Hidden safe block (or playing)
+            hiddenMesh.current!.setMatrixAt(hiddenCount, o.matrix);
+            hiddenCount++;
+          }
         }
       }
     });
@@ -60,17 +78,22 @@ export function Board() {
     hiddenMesh.current.count = hiddenCount;
     revealedMesh.current.count = revealedCount; 
     flagMesh.current.count = flagCount;
+    missedMineMesh.current.count = missedCount;
+    incorrectFlagMesh.current.count = incorrectCount;
 
     hiddenMesh.current.instanceMatrix.needsUpdate = true;
     revealedMesh.current.instanceMatrix.needsUpdate = true;
     flagMesh.current.instanceMatrix.needsUpdate = true;
+    missedMineMesh.current.instanceMatrix.needsUpdate = true;
+    incorrectFlagMesh.current.instanceMatrix.needsUpdate = true;
 
-    // Fix for raycasting issues when count grows from 0
     if (hiddenCount > 0) hiddenMesh.current.computeBoundingSphere();
     if (revealedCount > 0) revealedMesh.current.computeBoundingSphere();
     if (flagCount > 0) flagMesh.current.computeBoundingSphere();
+    if (missedCount > 0) missedMineMesh.current.computeBoundingSphere();
+    if (incorrectCount > 0) incorrectFlagMesh.current.computeBoundingSphere();
 
-  }, [grid]);
+  }, [grid, status]);
 
   return (
     <group position={[-size / 2, 0, -size / 2]}> 
@@ -82,6 +105,16 @@ export function Board() {
       {/* Flagged Blocks (Toon Bevelled Red) */}
       <instancedMesh ref={flagMesh} args={[bevelGeom, undefined, size * size]} frustumCulled={false}>
         <meshToonMaterial color="#FF4040" /> 
+      </instancedMesh>
+
+      {/* Missed Mines (Toon Bevelled Black) */}
+      <instancedMesh ref={missedMineMesh} args={[bevelGeom, undefined, size * size]} frustumCulled={false}>
+        <meshToonMaterial color="#222222" /> 
+      </instancedMesh>
+
+      {/* Incorrect Flags (Toon Bevelled Orange) */}
+      <instancedMesh ref={incorrectFlagMesh} args={[bevelGeom, undefined, size * size]} frustumCulled={false}>
+        <meshToonMaterial color="#FFA500" /> 
       </instancedMesh>
 
       {/* Revealed Floor (Stone) */}
