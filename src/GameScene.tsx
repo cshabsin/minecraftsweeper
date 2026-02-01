@@ -122,6 +122,8 @@ function PlayerController() {
     const handleMouseDown = (e: MouseEvent) => {
       if (!isLocked.current) return;
 
+      const { grid: freshGrid, size: freshSize, revealCell, chordCell, toggleFlag } = useGameStore.getState();
+
       raycaster.current.setFromCamera(center, camera);
       const intersects = raycaster.current.intersectObjects(scene.children, true);
       
@@ -133,13 +135,14 @@ function PlayerController() {
           point.addScaledVector(hit.face.normal, -0.01);
         }
 
-        const x = Math.floor(point.x + size / 2 + 0.5); 
-        const z = Math.floor(point.z + size / 2 + 0.5); 
-
-        if (x >= 0 && x < size && z >= 0 && z < size) {
+        const x = Math.floor(point.x + freshSize / 2 + 0.5); 
+        const z = Math.floor(point.z + freshSize / 2 + 0.5); 
+        
+        if (x >= 0 && x < freshSize && z >= 0 && z < freshSize) {
+           const idx = x + z * freshSize;
+           const cell = freshGrid[idx];
+           
            if (e.button === 0) {
-             const idx = x + z * size;
-             const cell = grid[idx];
              if (cell.isRevealed) {
                chordCell(x, z);
              } else {
