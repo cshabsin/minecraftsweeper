@@ -1,6 +1,5 @@
 import { useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Sky } from '@react-three/drei';
 import { Vector2, Vector3, Raycaster, Euler } from 'three';
 import { Board } from './Board';
 import { useGameStore } from './store';
@@ -278,7 +277,7 @@ function PlayerController() {
 }
 
 export function GameScene() {
-  const { initGame } = useGameStore();
+  const { initGame, size } = useGameStore();
 
   useEffect(() => {
     initGame(20, 40, 'medium'); // Start game
@@ -286,16 +285,17 @@ export function GameScene() {
 
   return (
     <Canvas camera={{ position: [0, 1.7, 0], fov: 75 }}>
-      <Sky sunPosition={[100, 20, 100]} />
+      <color attach="background" args={['#000']} />
+      <fog attach="fog" args={['#000', 5, size + 10]} />
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 10, 5]} intensity={1.5} />
       
       <Board />
       <PlayerController />
       
-      {/* Floor plane to prevent falling forever if you walk off edge */}
+      {/* Floor plane restricted to board size */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-        <planeGeometry args={[100, 100]} />
+        <planeGeometry args={[size, size]} />
         <meshStandardMaterial color="#808080" />
       </mesh>
     </Canvas>
