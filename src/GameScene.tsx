@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene, gl } = useThree();
-  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart } = useGameStore();
+  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -36,13 +36,6 @@ function PlayerController() {
         camera.quaternion.setFromEuler(euler.current);
     }
   }, [playerStart, status, camera, size]);
-
-  // Unlock mouse on Game Over
-  useEffect(() => {
-    if (status === 'won' || status === 'lost') {
-      document.exitPointerLock();
-    }
-  }, [status]);
 
   useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
@@ -95,6 +88,9 @@ function PlayerController() {
         case 'KeyD':
           moveRight.current = true;
           break;
+        case 'KeyR':
+          restart();
+          break;
       }
     };
 
@@ -121,6 +117,7 @@ function PlayerController() {
 
     const handleMouseDown = (e: MouseEvent) => {
       if (!isLocked.current) return;
+      if (status !== 'playing') return; // Disable interaction on Game Over
 
       const { grid: freshGrid, size: freshSize, revealCell, chordCell, toggleFlag } = useGameStore.getState();
 

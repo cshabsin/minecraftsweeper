@@ -108,11 +108,12 @@ function UI() {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'rgba(0,0,0,0.8)',
+          background: 'rgba(0,0,0,0.6)', // More transparent
           padding: '40px',
           textAlign: 'center',
-          pointerEvents: 'auto', // Re-enable clicks
-          border: '2px solid white'
+          pointerEvents: 'auto', // Re-enable clicks if they unlock mouse
+          border: '2px solid white',
+          backdropFilter: 'blur(5px)' // Nice blur effect
         }}>
           <h1 style={{ color: status === 'won' ? '#0f0' : '#f00' }}>
             {status === 'won' ? 'VICTORY!' : 'GAME OVER'}
@@ -120,11 +121,16 @@ function UI() {
           {status === 'won' && (
              <h2 style={{ color: 'white' }}>Time: {displayTime}</h2>
           )}
+          <div style={{ color: 'white', marginTop: '20px', fontFamily: 'monospace' }}>
+            <p>Press <b>R</b> to Restart</p>
+            <p style={{ fontSize: '14px', opacity: 0.7 }}>Press ESC to unlock mouse</p>
+          </div>
           <button 
             onClick={() => restart()}
             style={{
               fontSize: '20px',
               padding: '10px 20px',
+              marginTop: '20px',
               cursor: 'pointer',
               background: '#444',
               color: 'white',
