@@ -2,7 +2,7 @@ import { useGameStore } from './store';
 import { GameScene } from './GameScene';
 
 function UI() {
-  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, initGame } = useGameStore();
+  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, initGame, startTime, endTime } = useGameStore();
   const minesLeft = mineCount - flagsPlaced;
 
   const setDifficulty = (level: 'easy' | 'medium' | 'hard') => {
@@ -11,8 +11,14 @@ function UI() {
       case 'medium': initGame(20, 40); break;
       case 'hard': initGame(30, 150); break;
     }
-    // Also unlock mouse if it was locked? 
-    // Usually clicking the button requires mouse to be unlocked anyway.
+  };
+
+  const getDuration = () => {
+    if (!startTime || !endTime) return '0:00';
+    const seconds = Math.floor((endTime - startTime) / 1000);
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -97,6 +103,9 @@ function UI() {
           <h1 style={{ color: status === 'won' ? '#0f0' : '#f00' }}>
             {status === 'won' ? 'VICTORY!' : 'GAME OVER'}
           </h1>
+          {status === 'won' && (
+             <h2 style={{ color: 'white' }}>Time: {getDuration()}</h2>
+          )}
           <button 
             onClick={() => restart()}
             style={{
