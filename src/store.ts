@@ -69,9 +69,34 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
       }
 
+      // Calculate neighbors EARLY (so we can pick a nice start spot)
+      for (let i = 0; i < grid.length; i++) {
+        const cell = grid[i];
+        if (cell.isMine) continue;
+
+        let count = 0;
+        for (let dz = -1; dz <= 1; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dz === 0) continue;
+            const nx = cell.x + dx;
+            const nz = cell.z + dz;
+            if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
+              const neighborIdx = getIndex(nx, nz, size);
+              if (grid[neighborIdx].isMine) count++;
+            }
+          }
+        }
+        cell.neighborMines = count;
+      }
+
       // Connectivity Check (BFS)
-      // 1. Find a safe start cell
-      const startIdx = grid.findIndex(c => !c.isMine);
+      // 1. Find a safe start cell. Prioritize '0' neighbors (clearings).
+      let startIdx = grid.findIndex(c => !c.isMine && c.neighborMines === 0);
+      
+      // If no '0' cells, try '1', then any safe cell.
+      if (startIdx === -1) startIdx = grid.findIndex(c => !c.isMine && c.neighborMines === 1);
+      if (startIdx === -1) startIdx = grid.findIndex(c => !c.isMine);
+      
       if (startIdx === -1) { 
         // All mines?! Retry.
         attempts++; continue; 
@@ -113,30 +138,44 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (reachableSafe === totalSafe) {
         // SUCCESS: Valid board found.
         
-        // Calculate neighbors
-        for (let i = 0; i < grid.length; i++) {
-          const cell = grid[i];
-          if (cell.isMine) continue;
-
-          let count = 0;
-          for (let dz = -1; dz <= 1; dz++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dz === 0) continue;
-              const nx = cell.x + dx;
-              const nz = cell.z + dz;
-              if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
-                const neighborIdx = getIndex(nx, nz, size);
-                if (grid[neighborIdx].isMine) count++;
-              }
-            }
-          }
-          cell.neighborMines = count;
-        }
-
-        // Auto-reveal start? Let's just set the playerStart
         const startCell = grid[startIdx];
-        // We might want to reveal the start cell so they aren't standing IN a wall
-        grid[startIdx].isRevealed = true;
+        
+        // Auto-reveal the start cell
+        // We use the same logic as revealCell but synchronously here to ensure state is consistent
+        // Or we can just set isRevealed=true. 
+        // If it's a 0, we want to trigger the flood fill visually?
+        // Actually, if we just set isRevealed=true, the 'revealCell' function isn't called.
+        // But we can replicate the reveal logic or simply call revealCell immediately after setting state?
+        // Better: Pre-process the reveal in the grid data before setting state.
+        
+        const revealQueue = [startIdx];
+        const revealedSet = new Set<number>();
+        
+        while (revealQueue.length > 0) {
+            const rIdx = revealQueue.pop()!;
+            if (revealedSet.has(rIdx)) continue;
+            revealedSet.add(rIdx);
+            
+            const rCell = grid[rIdx];
+            rCell.isRevealed = true;
+            
+            if (rCell.neighborMines === 0) {
+                // Flood fill neighbors (8-way for reveal)
+                for (let dz = -1; dz <= 1; dz++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dz === 0) continue;
+                        const nx = rCell.x + dx;
+                        const nz = rCell.z + dz;
+                        if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
+                            const nIdx = getIndex(nx, nz, size);
+                            if (!grid[nIdx].isRevealed && !grid[nIdx].isMine) {
+                                revealQueue.push(nIdx);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         set({ 
             grid, 
