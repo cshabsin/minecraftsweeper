@@ -1,9 +1,17 @@
+import { useState, useEffect } from 'react';
 import { useGameStore } from './store';
 import { GameScene } from './GameScene';
 
 function UI() {
   const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, initGame, startTime, endTime } = useGameStore();
   const minesLeft = mineCount - flagsPlaced;
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (status !== 'playing') return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [status]);
 
   const setDifficulty = (level: 'easy' | 'medium' | 'hard') => {
     switch (level) {
@@ -13,13 +21,16 @@ function UI() {
     }
   };
 
-  const getDuration = () => {
-    if (!startTime || !endTime) return '0:00';
-    const seconds = Math.floor((endTime - startTime) / 1000);
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  const displayTime = status === 'playing' 
+    ? formatTime(now - startTime) 
+    : formatTime((endTime || startTime) - startTime);
 
   return (
     <div style={{
@@ -52,7 +63,10 @@ function UI() {
           <button onClick={() => setDifficulty('hard')} style={btnStyle}>HARD</button>
         </div>
         
-        <span>MINES: {minesLeft}</span>
+        <div style={{ display: 'flex', gap: '40px' }}>
+            <span>MINES: {minesLeft}</span>
+            <span>TIME: {displayTime}</span>
+        </div>
         
         <div style={{ display: 'flex', gap: '20px' }}>
           <button 
@@ -104,7 +118,7 @@ function UI() {
             {status === 'won' ? 'VICTORY!' : 'GAME OVER'}
           </h1>
           {status === 'won' && (
-             <h2 style={{ color: 'white' }}>Time: {getDuration()}</h2>
+             <h2 style={{ color: 'white' }}>Time: {displayTime}</h2>
           )}
           <button 
             onClick={() => restart()}
