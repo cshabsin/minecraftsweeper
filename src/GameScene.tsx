@@ -125,8 +125,9 @@ function PlayerController() {
       raycaster.current.setFromCamera(center, camera);
       const intersects = raycaster.current.intersectObjects(scene.children, true);
       
-      if (intersects.length > 0) {
-        const hit = intersects[0];
+      const hit = intersects.find(h => h.object !== highlightMesh.current && h.object.type !== 'LineSegments');
+
+      if (hit) {
         const point = hit.point.clone();
         if (hit.face) {
           point.addScaledVector(hit.face.normal, -0.01);
@@ -172,62 +173,108 @@ function PlayerController() {
     };
   }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY]); // Re-bind if setting changes
 
+  // Highlight Cursor
+  const highlightMesh = useRef<any>(null);
+
   useFrame((_, delta) => {
-    if (!isLocked.current) return;
-    
-    const speed = 10.0;
-    const actualSpeed = speed * delta;
+    // Movement Logic (existing)
+    if (isLocked.current) {
+        const speed = 10.0;
+        const actualSpeed = speed * delta;
 
-    const direction = new Vector3();
-    const frontVector = new Vector3(
-      0,
-      0,
-      Number(moveBackward.current) - Number(moveForward.current)
-    );
-    const sideVector = new Vector3(
-      Number(moveLeft.current) - Number(moveRight.current),
-      0,
-      0
-    );
+        const direction = new Vector3();
+        const frontVector = new Vector3(
+          0,
+          0,
+          Number(moveBackward.current) - Number(moveForward.current)
+        );
+        const sideVector = new Vector3(
+          Number(moveLeft.current) - Number(moveRight.current),
+          0,
+          0
+        );
 
-    direction
-      .subVectors(frontVector, sideVector)
-      .normalize()
-      .multiplyScalar(actualSpeed)
-      .applyEuler(camera.rotation);
+        direction
+          .subVectors(frontVector, sideVector)
+          .normalize()
+          .multiplyScalar(actualSpeed)
+          .applyEuler(camera.rotation);
 
-    const checkCollision = (newPos: Vector3) => {
-      const r = 0.2;
-      const corners = [
-        { x: newPos.x + r, z: newPos.z + r },
-        { x: newPos.x - r, z: newPos.z + r },
-        { x: newPos.x + r, z: newPos.z - r },
-        { x: newPos.x - r, z: newPos.z - r },
-      ];
+        const checkCollision = (newPos: Vector3) => {
+          const r = 0.2;
+          const corners = [
+            { x: newPos.x + r, z: newPos.z + r },
+            { x: newPos.x - r, z: newPos.z + r },
+            { x: newPos.x + r, z: newPos.z - r },
+            { x: newPos.x - r, z: newPos.z - r },
+          ];
 
-      for (const corner of corners) {
-        const gx = Math.floor(corner.x + size / 2 + 0.5);
-        const gz = Math.floor(corner.z + size / 2 + 0.5);
-        if (gx < 0 || gx >= size || gz < 0 || gz >= size) return true;
-        const idx = gx + gz * size;
-        const cell = grid[idx];
-        if (cell && !cell.isRevealed) return true;
-      }
-      return false;
-    };
+          for (const corner of corners) {
+            const gx = Math.floor(corner.x + size / 2 + 0.5);
+            const gz = Math.floor(corner.z + size / 2 + 0.5);
+            if (gx < 0 || gx >= size || gz < 0 || gz >= size) return true;
+            const idx = gx + gz * size;
+            const cell = grid[idx];
+            if (cell && !cell.isRevealed) return true;
+          }
+          return false;
+        };
 
-    const oldX = camera.position.x;
-    camera.position.x += direction.x;
-    if (checkCollision(camera.position)) camera.position.x = oldX;
+        const oldX = camera.position.x;
+        camera.position.x += direction.x;
+        if (checkCollision(camera.position)) camera.position.x = oldX;
 
-    const oldZ = camera.position.z;
-    camera.position.z += direction.z;
-    if (checkCollision(camera.position)) camera.position.z = oldZ;
-    
-    camera.position.y = 1.7;
+        const oldZ = camera.position.z;
+        camera.position.z += direction.z;
+        if (checkCollision(camera.position)) camera.position.z = oldZ;
+        
+        camera.position.y = 1.7;
+    }
+
+    // Highlight Logic
+    if (isLocked.current && highlightMesh.current) {
+        raycaster.current.setFromCamera(center, camera);
+        const intersects = raycaster.current.intersectObjects(scene.children, true);
+        
+        const hit = intersects.find(h => h.object !== highlightMesh.current && h.object.type !== 'LineSegments'); // Ignore helpers if any
+
+        if (hit) {
+            const point = hit.point.clone();
+            if (hit.face) point.addScaledVector(hit.face.normal, -0.01);
+
+            const x = Math.floor(point.x + size / 2 + 0.5); 
+            const z = Math.floor(point.z + size / 2 + 0.5); 
+
+            if (x >= 0 && x < size && z >= 0 && z < size) {
+                const idx = x + z * size;
+                const cell = grid[idx];
+                
+                highlightMesh.current.visible = true;
+                
+                if (cell && cell.isRevealed) {
+                    highlightMesh.current.position.set(x - size / 2, 0, z - size / 2);
+                    highlightMesh.current.scale.set(1, 0.1, 1);
+                } else {
+                    highlightMesh.current.position.set(x - size / 2, 0.5, z - size / 2);
+                    highlightMesh.current.scale.set(1, 1, 1);
+                }
+            } else {
+                highlightMesh.current.visible = false;
+            }
+        } else {
+            highlightMesh.current.visible = false;
+        }
+    } else if (highlightMesh.current) {
+        highlightMesh.current.visible = false;
+    }
   });
 
-  return null; // No visual component needed
+  return (
+    <mesh ref={highlightMesh} visible={false}>
+      <boxGeometry args={[1.01, 1.01, 1.01]} /> 
+      <meshBasicMaterial color="yellow" transparent opacity={0.2} />
+    </mesh>
+  );
 }
 
 export function GameScene() {
