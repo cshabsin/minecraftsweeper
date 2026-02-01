@@ -287,8 +287,8 @@ export function GameScene() {
   return (
     <Canvas camera={{ position: [0, 1.7, 0], fov: 75 }}>
       <Sky sunPosition={[100, 20, 100]} />
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[5, 10, 5]} intensity={1.5} />
       
       <Board />
       <PlayerController />
