@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene, gl } = useThree();
-  const { revealCell, toggleFlag, size, grid, settings, status } = useGameStore();
+  const { revealCell, toggleFlag, size, grid, settings, status, playerStart } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -22,6 +22,16 @@ function PlayerController() {
   
   // Camera State
   const euler = useRef(new Euler(0, 0, 0, 'YXZ'));
+
+  // Teleport to start position
+  useEffect(() => {
+    if (status === 'playing') {
+        camera.position.set(playerStart.x, 1.7, playerStart.z);
+        // Reset look direction? Maybe not necessary, but consistent.
+        // euler.current.set(0, 0, 0);
+        // camera.quaternion.setFromEuler(euler.current);
+    }
+  }, [playerStart, status, camera]);
 
   // Unlock mouse on Game Over
   useEffect(() => {

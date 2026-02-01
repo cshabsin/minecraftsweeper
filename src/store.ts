@@ -15,6 +15,7 @@ interface GameState {
   mineCount: number;
   status: 'playing' | 'won' | 'lost';
   flagsPlaced: number;
+  playerStart: { x: number, z: number };
   settings: {
     invertY: boolean;
   };
@@ -35,56 +36,122 @@ export const useGameStore = create<GameState>((set, get) => ({
   mineCount: 40,
   status: 'playing',
   flagsPlaced: 0,
+  playerStart: { x: 0, z: 0 },
   settings: {
     invertY: false,
   },
 
   initGame: (size, mineCount) => {
-    const grid: Cell[] = [];
-    for (let z = 0; z < size; z++) {
-      for (let x = 0; x < size; x++) {
-        grid.push({
-          x,
-          z,
-          isMine: false,
-          isRevealed: false,
-          isFlagged: false,
-          neighborMines: 0,
-        });
+    // Retry loop to ensure valid board
+    let attempts = 0;
+    while (attempts < 50) {
+      const grid: Cell[] = [];
+      for (let z = 0; z < size; z++) {
+        for (let x = 0; x < size; x++) {
+          grid.push({
+            x,
+            z,
+            isMine: false,
+            isRevealed: false,
+            isFlagged: false,
+            neighborMines: 0,
+          });
+        }
       }
-    }
 
-    // Place mines
-    let minesPlaced = 0;
-    while (minesPlaced < mineCount) {
-      const idx = Math.floor(Math.random() * grid.length);
-      if (!grid[idx].isMine) {
-        grid[idx].isMine = true;
-        minesPlaced++;
+      // Place mines
+      let minesPlaced = 0;
+      while (minesPlaced < mineCount) {
+        const idx = Math.floor(Math.random() * grid.length);
+        if (!grid[idx].isMine) {
+          grid[idx].isMine = true;
+          minesPlaced++;
+        }
       }
-    }
 
-    // Calculate neighbors
-    for (let i = 0; i < grid.length; i++) {
-      const cell = grid[i];
-      if (cell.isMine) continue;
+      // Connectivity Check (BFS)
+      // 1. Find a safe start cell
+      const startIdx = grid.findIndex(c => !c.isMine);
+      if (startIdx === -1) { 
+        // All mines?! Retry.
+        attempts++; continue; 
+      }
 
-      let count = 0;
-      for (let dz = -1; dz <= 1; dz++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dz === 0) continue;
-          const nx = cell.x + dx;
-          const nz = cell.z + dz;
+      // 2. Count total safe cells
+      const totalSafe = size * size - mineCount;
+
+      // 3. BFS to count reachable safe cells
+      const visited = new Set<number>();
+      const queue = [startIdx];
+      visited.add(startIdx);
+      
+      let reachableSafe = 0;
+
+      while (queue.length > 0) {
+        const currIdx = queue.shift()!;
+        reachableSafe++;
+
+        const cx = grid[currIdx].x;
+        const cz = grid[currIdx].z;
+
+        // Check neighbors (4-connectivity for movement)
+        const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        
+        for (const [dx, dz] of deltas) {
+          const nx = cx + dx;
+          const nz = cz + dz;
           if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
-            const neighborIdx = getIndex(nx, nz, size);
-            if (grid[neighborIdx].isMine) count++;
+             const nIdx = getIndex(nx, nz, size);
+             if (!grid[nIdx].isMine && !visited.has(nIdx)) {
+               visited.add(nIdx);
+               queue.push(nIdx);
+             }
           }
         }
       }
-      cell.neighborMines = count;
-    }
 
-    set({ grid, size, mineCount, status: 'playing', flagsPlaced: 0 });
+      if (reachableSafe === totalSafe) {
+        // SUCCESS: Valid board found.
+        
+        // Calculate neighbors
+        for (let i = 0; i < grid.length; i++) {
+          const cell = grid[i];
+          if (cell.isMine) continue;
+
+          let count = 0;
+          for (let dz = -1; dz <= 1; dz++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dz === 0) continue;
+              const nx = cell.x + dx;
+              const nz = cell.z + dz;
+              if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
+                const neighborIdx = getIndex(nx, nz, size);
+                if (grid[neighborIdx].isMine) count++;
+              }
+            }
+          }
+          cell.neighborMines = count;
+        }
+
+        // Auto-reveal start? Let's just set the playerStart
+        const startCell = grid[startIdx];
+        // We might want to reveal the start cell so they aren't standing IN a wall
+        grid[startIdx].isRevealed = true;
+
+        set({ 
+            grid, 
+            size, 
+            mineCount, 
+            status: 'playing', 
+            flagsPlaced: 0,
+            playerStart: { x: startCell.x, z: startCell.z } 
+        });
+        return;
+      }
+
+      attempts++;
+    }
+    console.warn("Failed to generate connected board");
   },
 
   revealCell: (x, z) => {
