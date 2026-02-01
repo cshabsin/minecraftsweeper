@@ -1,7 +1,7 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
 import { InstancedMesh, Object3D, Vector2, CanvasTexture, NearestFilter, LinearFilter } from 'three';
 import { useGameStore, Cell } from './store';
-import { createNumberAtlas, createBlockTexture } from './textures';
+import { createNumberAtlas } from './textures';
 
 const o = new Object3D();
 
@@ -15,7 +15,6 @@ export function Board() {
 
   // Generate textures once
   const numberAtlas = useMemo(() => createNumberAtlas(), []);
-  const blockTexture = useMemo(() => createBlockTexture(), []);
 
   useLayoutEffect(() => {
     if (!hiddenMesh.current || !revealedMesh.current || !flagMesh.current) return;
@@ -66,16 +65,16 @@ export function Board() {
 
   return (
     <group position={[-size / 2, 0, -size / 2]}> 
-      {/* Hidden Blocks (Bevelled Grey) */}
+      {/* Hidden Blocks (Grey with gaps) */}
       <instancedMesh ref={hiddenMesh} args={[undefined, undefined, size * size]} frustumCulled={false}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial map={blockTexture} color="#ffffff" /> 
+        <boxGeometry args={[0.95, 0.95, 0.95]} />
+        <meshStandardMaterial color="#bdbdbd" roughness={0.5} /> 
       </instancedMesh>
 
-      {/* Flagged Blocks (Bevelled Red) */}
+      {/* Flagged Blocks (Red with gaps) */}
       <instancedMesh ref={flagMesh} args={[undefined, undefined, size * size]} frustumCulled={false}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial map={blockTexture} color="#FF4040" /> 
+        <boxGeometry args={[0.95, 0.95, 0.95]} />
+        <meshStandardMaterial color="#FF4040" roughness={0.5} /> 
       </instancedMesh>
 
       {/* Revealed Floor (Stone) */}
