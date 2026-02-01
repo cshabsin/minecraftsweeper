@@ -24,35 +24,20 @@ export function Board() {
     let flagCount = 0;
 
     grid.forEach((cell) => {
-      // Position: x, 0, z
-      o.position.set(cell.x, 0, cell.z);
-      o.updateMatrix();
-
+      // Logic for positioning
       if (cell.isRevealed) {
+        // Revealed: It's a floor tile
+        o.position.set(cell.x, 0, cell.z);
+        o.scale.set(1, 0.1, 1); // Thin tile
+        o.updateMatrix();
         revealedMesh.current!.setMatrixAt(revealedCount, o.matrix);
-        
-        // Handle UV mapping for the texture atlas
-        // This is tricky with InstancedMesh without custom shaders or attribute magic.
-        // For MVP, we might just put the number texture on ALL revealed blocks, 
-        // but we need *specific* numbers.
-        // simplified approach: usage of setInstanceColor to Tint or just geometry attributes?
-        // Actually, pure InstancedMesh doesn't easily support different texture offsets per instance
-        // without a custom shader.
-        //
-        // ALTERNATIVE FOR MVP:
-        // Use 9 separate InstancedMeshes? (One for "1", one for "2"...)
-        // Or 1 InstancedMesh but modify the geometry UVs in a shader.
-        // Let's stick to the SIMPLEST first: 
-        // Just render text? No, that's heavy.
-        //
-        // Let's use `drei`'s <Instance> or similar if we were using it, 
-        // but raw InstancedMesh is faster.
-        //
-        // Let's do the "Multiple InstancedMesh" approach for numbers. 
-        // It's 8 extra draw calls, which is negligible.
-        
         revealedCount++;
       } else {
+        // Hidden or Flagged: It's a Wall
+        o.position.set(cell.x, 0.5, cell.z); // Center is 0.5 up
+        o.scale.set(1, 1, 1); // Full block
+        o.updateMatrix();
+        
         if (cell.isFlagged) {
           flagMesh.current!.setMatrixAt(flagCount, o.matrix);
           flagCount++;
@@ -64,7 +49,7 @@ export function Board() {
     });
 
     hiddenMesh.current.count = hiddenCount;
-    revealedMesh.current.count = revealedCount; // We are treating "Revealed" as just the generic "Empty/0" stone for now.
+    revealedMesh.current.count = revealedCount; 
     flagMesh.current.count = flagCount;
 
     hiddenMesh.current.instanceMatrix.needsUpdate = true;
@@ -75,43 +60,33 @@ export function Board() {
 
   return (
     <group position={[-size / 2, 0, -size / 2]}> 
-      {/* Hidden Blocks (Grass) */}
+      {/* Hidden Blocks (Grass/Dirt Walls) */}
       <instancedMesh ref={hiddenMesh} args={[undefined, undefined, size * size]}>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#5C9E5C" /> {/* Green */}
+        <meshStandardMaterial color="#5C9E5C" /> 
       </instancedMesh>
 
-      {/* Flagged Blocks (Red Tint) */}
+      {/* Flagged Blocks (Red Walls) */}
       <instancedMesh ref={flagMesh} args={[undefined, undefined, size * size]}>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#FF4040" /> {/* Red */}
+        <meshStandardMaterial color="#FF4040" /> 
       </instancedMesh>
 
-      {/* Revealed Empty Blocks (Stone) */}
+      {/* Revealed Floor (Stone) */}
       <instancedMesh ref={revealedMesh} args={[undefined, undefined, size * size]}>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#808080" /> {/* Grey */}
+        <meshStandardMaterial color="#808080" /> 
       </instancedMesh>
       
-      {/* 
-         TODO: Add Number rendering. 
-         For the MVP, I'm just going to place simple Text 
-         objects for non-zero revealed blocks. 
-         Ideally, this should be instanced too, but `drei/Text` is heavy.
-         
-         Better: A separate InstancedMesh for each number 1-8.
-      */}
       <Numbers grid={grid} />
     </group>
   );
 }
 
 function Numbers({ grid }: { grid: Cell[] }) {
-  // We bucket cells by their neighbor count to render them efficiently
   const buckets = useMemo(() => {
     const b: Record<number, Cell[]> = {};
     for(let i=1; i<=8; i++) b[i] = [];
-    
     grid.forEach(cell => {
       if (cell.isRevealed && !cell.isMine && cell.neighborMines > 0) {
         b[cell.neighborMines].push(cell);
@@ -131,19 +106,13 @@ function Numbers({ grid }: { grid: Cell[] }) {
 
 function NumberLayer({ num, cells }: { num: number, cells: Cell[] }) {
   const mesh = useRef<InstancedMesh>(null);
-  const texture = useMemo(() => {
-    const t = createNumberAtlas(); 
-    // We need to clone and offset texture for this specific number? 
-    // Actually, createNumberAtlas makes a whole grid.
-    // Easier: Just make a specific texture for THIS number to avoid UV math complexity in React.
-    return createSingleNumberTexture(num);
-  }, [num]);
+  const texture = useMemo(() => createSingleNumberTexture(num), [num]);
 
   useLayoutEffect(() => {
     if (!mesh.current) return;
     const o = new Object3D();
     cells.forEach((cell, i) => {
-      o.position.set(cell.x, 0.51, cell.z); // Slightly above the block
+      o.position.set(cell.x, 0.06, cell.z); // Slightly above the floor tile (0.05 + epsilon)
       o.rotation.x = -Math.PI / 2; // Flat on top
       o.updateMatrix();
       mesh.current!.setMatrixAt(i, o.matrix);

@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene } = useThree();
-  const { revealCell, toggleFlag, size } = useGameStore();
+  const { revealCell, toggleFlag, size, grid } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -71,29 +71,15 @@ function PlayerController() {
       if (intersects.length > 0) {
         const hit = intersects[0];
         
-        // Raycast logic:
-        // Because blocks are 1x1 centered at integer coords, 
-        // using floor(point + normal * 0.5) is usually safer than round().
-        // But for top-down clicking on a flat grid, round() is usually okay.
-        // Let's refine it slightly to be more robust by using the face normal if needed,
-        // but for now, the previous math was "okay" assuming we hit the top face.
-        //
-        // However, if we hit the *side* of a block, simple rounding might be off.
-        // Better 3D grid selection: hit.point + hit.face.normal * 0.5 (to move into the block center)
-        
-        // But wait, if we want to SELECT the block we hit:
-        // The block's center is floor(position).
-        // If we hit a face, the point is on the surface.
-        // To find the block *containing* the point (or the block *behind* the face),
-        // we can move slightly *into* the object along the ray direction? 
-        // No, simplest is: map the INSTANCE index to the grid coordinate.
-        
-        // Since we rely on generic intersection, let's try the "move into block" trick.
-        // gridX = Math.floor(hit.point.x - hit.face.normal.x * 0.1 + size/2)
-        // Actually, just rounding x/z works if we are hitting unit cubes aligned to grid.
-        
-        const x = Math.round(hit.point.x + size / 2 - 0.5); 
-        const z = Math.round(hit.point.z + size / 2 - 0.5); 
+        // Nudge the point slightly INTO the block to ensure we select the right one
+        // when clicking a face.
+        const point = hit.point.clone();
+        if (hit.face) {
+          point.addScaledVector(hit.face.normal, -0.01);
+        }
+
+        const x = Math.floor(point.x + size / 2 + 0.5); 
+        const z = Math.floor(point.z + size / 2 + 0.5); 
 
         if (x >= 0 && x < size && z >= 0 && z < size) {
            if (e.button === 0) {
@@ -145,11 +131,55 @@ function PlayerController() {
       .multiplyScalar(actualSpeed)
       .applyEuler(camera.rotation);
 
-    // Lock Y movement (stay on ground)
+    // Collision Detection Function
+    const checkCollision = (newPos: Vector3) => {
+      // Player radius (approx)
+      const r = 0.2;
+      
+      // Check 4 corners of player bounding box
+      const corners = [
+        { x: newPos.x + r, z: newPos.z + r },
+        { x: newPos.x - r, z: newPos.z + r },
+        { x: newPos.x + r, z: newPos.z - r },
+        { x: newPos.x - r, z: newPos.z - r },
+      ];
+
+      for (const corner of corners) {
+        const gx = Math.floor(corner.x + size / 2 + 0.5);
+        const gz = Math.floor(corner.z + size / 2 + 0.5);
+
+        // Out of bounds is a wall
+        if (gx < 0 || gx >= size || gz < 0 || gz >= size) return true;
+
+        // Find cell
+        const cell = grid.find(c => c.x === gx && c.z === gz);
+        
+        // If cell is NOT revealed, it is a wall (solid)
+        // Also check if it's flagged? Flagged usually means "don't dig", but is it solid? 
+        // In our visuals, flagged is a wall.
+        if (cell && !cell.isRevealed) {
+          return true; // Collision!
+        }
+      }
+      return false;
+    };
+
+    // Move X
+    const oldX = camera.position.x;
     camera.position.x += direction.x;
+    if (checkCollision(camera.position)) {
+      camera.position.x = oldX; // Revert if hit
+    }
+
+    // Move Z
+    const oldZ = camera.position.z;
     camera.position.z += direction.z;
+    if (checkCollision(camera.position)) {
+      camera.position.z = oldZ; // Revert if hit
+    }
     
-    // Optional: Head bob or simple gravity could go here
+    // Lock Y
+    camera.position.y = 1.7;
   });
 
   return <PointerLockControls />;
