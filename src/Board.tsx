@@ -61,19 +61,19 @@ export function Board() {
   return (
     <group position={[-size / 2, 0, -size / 2]}> 
       {/* Hidden Blocks (Grass/Dirt Walls) */}
-      <instancedMesh ref={hiddenMesh} args={[undefined, undefined, size * size]}>
+      <instancedMesh ref={hiddenMesh} args={[undefined, undefined, size * size]} frustumCulled={false}>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color="#5C9E5C" /> 
       </instancedMesh>
 
       {/* Flagged Blocks (Red Walls) */}
-      <instancedMesh ref={flagMesh} args={[undefined, undefined, size * size]}>
+      <instancedMesh ref={flagMesh} args={[undefined, undefined, size * size]} frustumCulled={false}>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color="#FF4040" /> 
       </instancedMesh>
 
       {/* Revealed Floor (Stone) */}
-      <instancedMesh ref={revealedMesh} args={[undefined, undefined, size * size]}>
+      <instancedMesh ref={revealedMesh} args={[undefined, undefined, size * size]} frustumCulled={false}>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color="#808080" /> 
       </instancedMesh>
