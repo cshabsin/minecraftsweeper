@@ -272,12 +272,11 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        if (flaggedCount === cell.neighborMines) {
-          // Reveal remaining neighbors
-          for (let dz = -1; dz <= 1; dz++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dz === 0) continue;
-              const nx = cell.x + dx;
+            if (flaggedCount >= cell.neighborMines) {
+              // Reveal remaining neighbors
+              for (let dz = -1; dz <= 1; dz++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  if (dx === 0 && dz === 0) continue;              const nx = cell.x + dx;
               const nz = cell.z + dz;
               if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
                  const neighborIdx = getIndex(nx, nz, size);
