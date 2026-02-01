@@ -3,7 +3,7 @@ import { useGameStore } from './store';
 import { GameScene } from './GameScene';
 
 function UI() {
-  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, initGame, startTime, endTime } = useGameStore();
+  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, initGame, startTime, endTime, difficulty, bestTimes } = useGameStore();
   const minesLeft = mineCount - flagsPlaced;
   const [now, setNow] = useState(Date.now());
 
@@ -15,9 +15,9 @@ function UI() {
 
   const setDifficulty = (level: 'easy' | 'medium' | 'hard') => {
     switch (level) {
-      case 'easy': initGame(10, 10); break;
-      case 'medium': initGame(20, 40); break;
-      case 'hard': initGame(30, 150); break;
+      case 'easy': initGame(10, 10, 'easy'); break;
+      case 'medium': initGame(20, 40, 'medium'); break;
+      case 'hard': initGame(30, 150, 'hard'); break;
     }
   };
 
@@ -27,6 +27,18 @@ function UI() {
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  const getButtonText = (level: 'easy' | 'medium' | 'hard', label: string) => {
+      const best = bestTimes[level];
+      return best ? `${label} (${formatTime(best)})` : label;
+  };
+
+  const getButtonStyle = (level: 'easy' | 'medium' | 'hard') => ({
+      ...btnStyle,
+      background: difficulty === level ? '#666' : '#444',
+      border: difficulty === level ? '2px solid #4f4' : '1px solid white',
+      fontWeight: difficulty === level ? 'bold' : 'normal'
+  });
 
   const displayTime = (status === 'playing' && startTime > 0)
     ? formatTime(now - startTime) 
@@ -58,9 +70,9 @@ function UI() {
         pointerEvents: 'auto' // Allow clicks on the bar
       }}>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setDifficulty('easy')} style={btnStyle}>EASY</button>
-          <button onClick={() => setDifficulty('medium')} style={btnStyle}>MED</button>
-          <button onClick={() => setDifficulty('hard')} style={btnStyle}>HARD</button>
+          <button onClick={() => setDifficulty('easy')} style={getButtonStyle('easy')}>{getButtonText('easy', 'EASY')}</button>
+          <button onClick={() => setDifficulty('medium')} style={getButtonStyle('medium')}>{getButtonText('medium', 'MED')}</button>
+          <button onClick={() => setDifficulty('hard')} style={getButtonStyle('hard')}>{getButtonText('hard', 'HARD')}</button>
         </div>
         
         <div style={{ display: 'flex', gap: '40px' }}>

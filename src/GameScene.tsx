@@ -281,7 +281,7 @@ export function GameScene() {
   const { initGame } = useGameStore();
 
   useEffect(() => {
-    initGame(20, 40); // Start game
+    initGame(20, 40, 'medium'); // Start game
   }, []);
 
   return (

@@ -15,6 +15,8 @@ interface GameState {
   size: number;
   mineCount: number;
   status: 'playing' | 'won' | 'lost';
+  difficulty: 'easy' | 'medium' | 'hard';
+  bestTimes: Record<'easy' | 'medium' | 'hard', number | null>;
   flagsPlaced: number;
   playerStart: { x: number, z: number };
   explodedMine: number | null;
@@ -24,7 +26,7 @@ interface GameState {
     invertY: boolean;
   };
   
-  initGame: (size: number, mineCount: number) => void;
+  initGame: (size: number, mineCount: number, difficulty: 'easy' | 'medium' | 'hard') => void;
   revealCell: (x: number, z: number) => void;
   chordCell: (x: number, z: number) => void;
   toggleFlag: (x: number, z: number) => void;
@@ -42,6 +44,8 @@ export const useGameStore = create<GameState>()(
       size: 20,
       mineCount: 40,
       status: 'playing',
+      difficulty: 'medium',
+      bestTimes: { easy: null, medium: null, hard: null },
       flagsPlaced: 0,
       playerStart: { x: 0, z: 0 },
       explodedMine: null,
@@ -51,7 +55,7 @@ export const useGameStore = create<GameState>()(
         invertY: false,
       },
 
-      initGame: (size, mineCount) => {
+      initGame: (size, mineCount, difficulty) => {
         // Retry loop to ensure valid board
         let attempts = 0;
         while (attempts < 50) {
@@ -183,11 +187,13 @@ export const useGameStore = create<GameState>()(
                 grid, 
                 size, 
                 mineCount, 
-                            status: 'playing', 
-                            flagsPlaced: 0,
-                            playerStart: { x: startCell.x, z: startCell.z },
-                            explodedMine: null,
-                            startTime: Date.now(),                endTime: 0
+                difficulty,
+                status: 'playing', 
+                flagsPlaced: 0,
+                playerStart: { x: startCell.x, z: startCell.z },
+                explodedMine: null,
+                startTime: Date.now(),
+                endTime: 0
             });
             return;
           }
@@ -197,7 +203,7 @@ export const useGameStore = create<GameState>()(
       },
 
       revealCell: (x, z) => {
-        const { grid, size, status } = get();
+        const { grid, size, status, startTime, difficulty, bestTimes } = get();
         if (status !== 'playing') return;
 
         const index = getIndex(x, z, size);
@@ -247,62 +253,69 @@ export const useGameStore = create<GameState>()(
         const hiddenNonMines = newGrid.filter(c => !c.isMine && !c.isRevealed).length;
         const newStatus = hiddenNonMines === 0 ? 'won' : 'playing';
         const endTime = newStatus !== 'playing' ? Date.now() : 0;
+        
+        let newBestTimes = bestTimes;
+        if (newStatus === 'won') {
+            const time = endTime - startTime;
+            if (bestTimes[difficulty] === null || time < bestTimes[difficulty]!) {
+                newBestTimes = { ...bestTimes, [difficulty]: time };
+            }
+        }
 
-        set({ grid: newGrid, status: newStatus, ...(endTime ? { endTime } : {}) });
+        set({ grid: newGrid, status: newStatus, bestTimes: newBestTimes, ...(endTime ? { endTime } : {}) });
       },
 
-  chordCell: (x, z) => {
-    const { grid, size, status, revealCell } = get();
-    if (status !== 'playing') return;
+      chordCell: (x, z) => {
+        const { grid, size, status, revealCell } = get();
+        if (status !== 'playing') return;
 
-    const index = getIndex(x, z, size);
-    const cell = grid[index];
+        const index = getIndex(x, z, size);
+        const cell = grid[index];
 
-    if (!cell.isRevealed) return; // Can only chord revealed cells
+        if (!cell.isRevealed) return; // Can only chord revealed cells
 
-    // Count flagged neighbors
-    let flaggedCount = 0;
-    for (let dz = -1; dz <= 1; dz++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dz === 0) continue;
-        const nx = cell.x + dx;
-        const nz = cell.z + dz;
-        if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
-          const neighborIdx = getIndex(nx, nz, size);
-          if (grid[neighborIdx].isFlagged) flaggedCount++;
-        }
-      }
-    }
-
-    if (flaggedCount === cell.neighborMines) {
-      // Reveal remaining neighbors
-      for (let dz = -1; dz <= 1; dz++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dz === 0) continue;
-          const nx = cell.x + dx;
-          const nz = cell.z + dz;
-          if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
-             const neighborIdx = getIndex(nx, nz, size);
-             const neighbor = grid[neighborIdx];
-             if (!neighbor.isRevealed && !neighbor.isFlagged) {
-               revealCell(nx, nz);
-             }
+        // Count flagged neighbors
+        let flaggedCount = 0;
+        for (let dz = -1; dz <= 1; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dz === 0) continue;
+            const nx = cell.x + dx;
+            const nz = cell.z + dz;
+            if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
+              const neighborIdx = getIndex(nx, nz, size);
+              if (grid[neighborIdx].isFlagged) flaggedCount++;
+            }
           }
         }
-      }
-    }
-  },
 
-        toggleFlag: (x, z) => {
-          const { grid, size, status, flagsPlaced } = get();
-          if (status !== 'playing') return;
-      
-          const index = getIndex(x, z, size);
-          const cell = grid[index];
-      
-          console.log('toggleFlag', x, z, cell);
-      
-          if (cell.isRevealed) return;
+        if (flaggedCount === cell.neighborMines) {
+          // Reveal remaining neighbors
+          for (let dz = -1; dz <= 1; dz++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dz === 0) continue;
+              const nx = cell.x + dx;
+              const nz = cell.z + dz;
+              if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
+                 const neighborIdx = getIndex(nx, nz, size);
+                 const neighbor = grid[neighborIdx];
+                 if (!neighbor.isRevealed && !neighbor.isFlagged) {
+                   revealCell(nx, nz);
+                 }
+              }
+            }
+          }
+        }
+      },
+
+      toggleFlag: (x, z) => {
+        const { grid, size, status, flagsPlaced } = get();
+        if (status !== 'playing') return;
+
+        const index = getIndex(x, z, size);
+        const cell = grid[index];
+
+        if (cell.isRevealed) return;
+
         const newGrid = [...grid];
         newGrid[index] = { ...cell, isFlagged: !cell.isFlagged };
         
@@ -313,8 +326,8 @@ export const useGameStore = create<GameState>()(
       },
 
       restart: () => {
-        const { size, mineCount, initGame } = get();
-        initGame(size, mineCount);
+        const { size, mineCount, initGame, difficulty } = get();
+        initGame(size, mineCount, difficulty);
       },
 
       toggleInvertY: () => {
@@ -323,7 +336,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'minecraftsweeper-storage',
-      partialize: (state) => ({ settings: state.settings }), // Only persist settings
+      partialize: (state) => ({ settings: state.settings, bestTimes: state.bestTimes }),
     }
   )
 );
