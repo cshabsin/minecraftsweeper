@@ -26,12 +26,16 @@ function PlayerController() {
   // Teleport to start position
   useEffect(() => {
     if (status === 'playing') {
-        camera.position.set(playerStart.x, 1.7, playerStart.z);
-        // Reset look direction? Maybe not necessary, but consistent.
-        // euler.current.set(0, 0, 0);
-        // camera.quaternion.setFromEuler(euler.current);
+        // Offset by -size/2 to match Board's group position
+        camera.position.set(playerStart.x - size / 2, 1.7, playerStart.z - size / 2);
+        
+        // Look towards the horizon (forward)
+        // We look towards positive Z or something? 
+        // Let's just reset rotation to 0,0,0 which is "Forward" in Three.js
+        euler.current.set(0, 0, 0);
+        camera.quaternion.setFromEuler(euler.current);
     }
-  }, [playerStart, status, camera]);
+  }, [playerStart, status, camera, size]);
 
   // Unlock mouse on Game Over
   useEffect(() => {
