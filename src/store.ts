@@ -22,6 +22,7 @@ interface GameState {
   
   initGame: (size: number, mineCount: number) => void;
   revealCell: (x: number, z: number) => void;
+  chordCell: (x: number, z: number) => void;
   toggleFlag: (x: number, z: number) => void;
   restart: () => void;
   toggleInvertY: () => void;
@@ -240,6 +241,52 @@ export const useGameStore = create<GameState>((set, get) => ({
     const newStatus = hiddenNonMines === 0 ? 'won' : 'playing';
 
     set({ grid: newGrid, status: newStatus });
+  },
+
+  chordCell: (x, z) => {
+    const { grid, size, status, revealCell } = get();
+    if (status !== 'playing') return;
+
+    const index = getIndex(x, z, size);
+    const cell = grid[index];
+
+    if (!cell.isRevealed) return; // Can only chord revealed cells
+
+    // Count flagged neighbors
+    let flaggedCount = 0;
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dz === 0) continue;
+        const nx = cell.x + dx;
+        const nz = cell.z + dz;
+        if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
+          const neighborIdx = getIndex(nx, nz, size);
+          if (grid[neighborIdx].isFlagged) flaggedCount++;
+        }
+      }
+    }
+
+    if (flaggedCount === cell.neighborMines) {
+      // Reveal remaining neighbors
+      // Note: revealCell logic is efficient enough to handle calls one by one 
+      // because React/Zustand will batch or we accept multiple renders.
+      // Optimally we'd do it in one pass, but reusing revealCell ensures consistent game over logic.
+      
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dz === 0) continue;
+          const nx = cell.x + dx;
+          const nz = cell.z + dz;
+          if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
+             const neighborIdx = getIndex(nx, nz, size);
+             const neighbor = grid[neighborIdx];
+             if (!neighbor.isRevealed && !neighbor.isFlagged) {
+               revealCell(nx, nz);
+             }
+          }
+        }
+      }
+    }
   },
 
   toggleFlag: (x, z) => {

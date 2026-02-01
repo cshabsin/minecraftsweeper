@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene, gl } = useThree();
-  const { revealCell, toggleFlag, size, grid, settings, status, playerStart } = useGameStore();
+  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -137,7 +137,13 @@ function PlayerController() {
 
         if (x >= 0 && x < size && z >= 0 && z < size) {
            if (e.button === 0) {
-             revealCell(x, z);
+             const idx = x + z * size;
+             const cell = grid[idx];
+             if (cell.isRevealed) {
+               chordCell(x, z);
+             } else {
+               revealCell(x, z);
+             }
            } else if (e.button === 2) {
              toggleFlag(x, z);
            }
