@@ -1,5 +1,5 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
-import { InstancedMesh, Object3D, Vector2, CanvasTexture, NearestFilter } from 'three';
+import { InstancedMesh, Object3D, Vector2, CanvasTexture, NearestFilter, LinearFilter } from 'three';
 import { useGameStore, Cell } from './store';
 import { createNumberAtlas } from './textures';
 
@@ -133,7 +133,7 @@ function NumberLayer({ num, cells }: { num: number, cells: Cell[] }) {
 
 // Helper for single number texture (easier than atlas for MVP instancing)
 function createSingleNumberTexture(num: number): CanvasTexture {
-    const size = 64;
+    const size = 256;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -142,12 +142,13 @@ function createSingleNumberTexture(num: number): CanvasTexture {
     const colors = ['', 'blue', 'green', 'red', 'darkblue', 'maroon', 'cyan', 'black', 'gray'];
     
     ctx.fillStyle = colors[num];
-    ctx.font = 'bold 40px monospace';
+    ctx.font = 'bold 150px Arial, sans-serif'; // High-res, smooth font
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(num.toString(), size/2, size/2);
     
     const t = new CanvasTexture(canvas);
-    t.magFilter = NearestFilter;
+    t.minFilter = LinearFilter;
+    t.magFilter = LinearFilter;
     return t;
 }
