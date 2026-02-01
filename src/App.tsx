@@ -28,9 +28,9 @@ function UI() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const displayTime = status === 'playing' 
+  const displayTime = (status === 'playing' && startTime > 0)
     ? formatTime(now - startTime) 
-    : formatTime((endTime || startTime) - startTime);
+    : (startTime > 0 ? formatTime((endTime || startTime) - startTime) : '0:00');
 
   return (
     <div style={{
