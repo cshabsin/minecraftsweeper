@@ -51,3 +51,44 @@ export function createNumberAtlas(): CanvasTexture {
   texture.minFilter = NearestFilter;
   return texture;
 }
+
+export function createBlockTexture(): CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const border = 24; // Thick bevel
+
+  // Fill main
+  ctx.fillStyle = '#bdbdbd';
+  ctx.fillRect(0, 0, size, size);
+
+  // Top/Left highlight
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(size, 0);
+  ctx.lineTo(size - border, border);
+  ctx.lineTo(border, border);
+  ctx.lineTo(border, size - border);
+  ctx.lineTo(0, size);
+  ctx.fill();
+
+  // Bottom/Right shadow
+  ctx.fillStyle = '#7b7b7b';
+  ctx.beginPath();
+  ctx.moveTo(size, size);
+  ctx.lineTo(0, size);
+  ctx.lineTo(border, size - border);
+  ctx.lineTo(size - border, size - border);
+  ctx.lineTo(size - border, border);
+  ctx.lineTo(size, 0);
+  ctx.fill();
+
+  const texture = new CanvasTexture(canvas);
+  texture.magFilter = NearestFilter;
+  texture.minFilter = NearestFilter;
+  return texture;
+}
