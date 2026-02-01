@@ -17,6 +17,7 @@ interface GameState {
   status: 'playing' | 'won' | 'lost';
   flagsPlaced: number;
   playerStart: { x: number, z: number };
+  explodedMine: number | null;
   startTime: number;
   endTime: number;
   settings: {
@@ -43,6 +44,7 @@ export const useGameStore = create<GameState>()(
       status: 'playing',
       flagsPlaced: 0,
       playerStart: { x: 0, z: 0 },
+      explodedMine: null,
       startTime: 0,
       endTime: 0,
       settings: {
@@ -181,11 +183,11 @@ export const useGameStore = create<GameState>()(
                 grid, 
                 size, 
                 mineCount, 
-                status: 'playing', 
-                flagsPlaced: 0,
-                playerStart: { x: startCell.x, z: startCell.z },
-                startTime: Date.now(),
-                endTime: 0
+                            status: 'playing', 
+                            flagsPlaced: 0,
+                            playerStart: { x: startCell.x, z: startCell.z },
+                            explodedMine: null,
+                            startTime: Date.now(),                endTime: 0
             });
             return;
           }
@@ -207,7 +209,7 @@ export const useGameStore = create<GameState>()(
         if (cell.isMine) {
           const newGrid = [...grid];
           newGrid[index] = { ...cell, isRevealed: true };
-          set({ grid: newGrid, status: 'lost', endTime: Date.now() });
+          set({ grid: newGrid, status: 'lost', explodedMine: index, endTime: Date.now() });
           return;
         }
 

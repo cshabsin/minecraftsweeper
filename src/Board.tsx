@@ -6,7 +6,7 @@ import { createNumberAtlas } from './textures';
 const o = new Object3D();
 
 export function Board() {
-  const { grid, size } = useGameStore();
+  const { grid, size, explodedMine } = useGameStore();
   
   // Refs for the three main layers
   const hiddenMesh = useRef<InstancedMesh>(null);
@@ -56,6 +56,11 @@ export function Board() {
     revealedMesh.current.instanceMatrix.needsUpdate = true;
     flagMesh.current.instanceMatrix.needsUpdate = true;
 
+    // Fix for raycasting issues when count grows from 0
+    if (hiddenCount > 0) hiddenMesh.current.computeBoundingSphere();
+    if (revealedCount > 0) revealedMesh.current.computeBoundingSphere();
+    if (flagCount > 0) flagMesh.current.computeBoundingSphere();
+
   }, [grid]);
 
   return (
@@ -79,6 +84,13 @@ export function Board() {
       </instancedMesh>
       
       <Numbers grid={grid} />
+      
+      {explodedMine !== null && grid[explodedMine] && (
+        <mesh position={[grid[explodedMine].x, 0.5, grid[explodedMine].z]}>
+          <icosahedronGeometry args={[0.8, 2]} />
+          <meshBasicMaterial color="red" wireframe />
+        </mesh>
+      )}
     </group>
   );
 }
