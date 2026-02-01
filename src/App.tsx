@@ -25,7 +25,8 @@ function UI() {
       pointerEvents: 'none',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-between'
+      justifyContent: 'space-between',
+      zIndex: 100
     }}>
       {/* Top Bar */}
       <div style={{
