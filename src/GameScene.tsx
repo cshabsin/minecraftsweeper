@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Sky } from '@react-three/drei';
 import { Vector2, Vector3, Raycaster, Euler } from 'three';
 import { Board } from './Board';
 import { useGameStore } from './store';
@@ -9,7 +10,7 @@ function PlayerController() {
   const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
-  // Movement State
+  // ... (existing state) ...
   const moveForward = useRef(false);
   const moveBackward = useRef(false);
   const moveLeft = useRef(false);
@@ -29,8 +30,6 @@ function PlayerController() {
         camera.position.set(playerStart.x - size / 2, 1.7, playerStart.z - size / 2);
         
         // Look towards the horizon (forward)
-        // We look towards positive Z or something? 
-        // Let's just reset rotation to 0,0,0 which is "Forward" in Three.js
         euler.current.set(0, 0, 0);
         camera.quaternion.setFromEuler(euler.current);
     }
@@ -48,8 +47,6 @@ function PlayerController() {
       euler.current.setFromQuaternion(camera.quaternion);
       
       euler.current.y -= movementX * sensitivity;
-      // Invert Y logic: standard is "up moves up" (subtracting from X rotation).
-      // Invert Y means "up moves down" (adding to X rotation).
       const invertFactor = settings.invertY ? 1 : -1;
       euler.current.x += movementY * sensitivity * invertFactor;
       
@@ -116,7 +113,7 @@ function PlayerController() {
 
     const handleMouseDown = (e: MouseEvent) => {
       if (!isLocked.current) return;
-      if (status !== 'playing') return; // Disable interaction on Game Over
+      if (status !== 'playing') return;
 
       const { grid: freshGrid, size: freshSize, revealCell, chordCell, toggleFlag } = useGameStore.getState();
 
@@ -170,13 +167,12 @@ function PlayerController() {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY]); // Re-bind if setting changes
+  }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY, status, restart]);
 
-  // Highlight Cursor
+  // Highlight Cursor logic ...
   const highlightMesh = useRef<any>(null);
 
   useFrame((_, delta) => {
-    // Movement Logic (existing)
     if (isLocked.current) {
         const speed = 10.0;
         const actualSpeed = speed * delta;
@@ -230,26 +226,21 @@ function PlayerController() {
         camera.position.y = 1.7;
     }
 
-    // Highlight Logic
     if (isLocked.current && highlightMesh.current) {
         raycaster.current.setFromCamera(center, camera);
         const intersects = raycaster.current.intersectObjects(scene.children, true);
-        
-        const hit = intersects.find(h => h.object !== highlightMesh.current && h.object.type !== 'LineSegments'); // Ignore helpers if any
+        const hit = intersects.find(h => h.object !== highlightMesh.current && h.object.type !== 'LineSegments');
 
         if (hit) {
             const point = hit.point.clone();
             if (hit.face) point.addScaledVector(hit.face.normal, -0.01);
-
             const x = Math.floor(point.x + size / 2 + 0.5); 
             const z = Math.floor(point.z + size / 2 + 0.5); 
 
             if (x >= 0 && x < size && z >= 0 && z < size) {
                 const idx = x + z * size;
                 const cell = grid[idx];
-                
                 highlightMesh.current.visible = true;
-                
                 if (cell && cell.isRevealed) {
                     highlightMesh.current.position.set(x - size / 2, 0, z - size / 2);
                     highlightMesh.current.scale.set(1, 0.1, 1);
@@ -283,10 +274,12 @@ export function GameScene() {
     initGame(20, 40, 'medium'); // Start game
   }, []);
 
+  const skyBlue = "#87ceeb";
+
   return (
     <Canvas camera={{ position: [0, 1.7, 0], fov: 75 }}>
-      <color attach="background" args={['#000']} />
-      <fog attach="fog" args={['#000', 5, size + 10]} />
+      <Sky sunPosition={[100, 20, 100]} />
+      <fog attach="fog" args={[skyBlue, 5, size + 15]} />
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 10, 5]} intensity={1.5} />
       
