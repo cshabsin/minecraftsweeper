@@ -7,10 +7,10 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene, gl } = useThree();
-  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart } = useGameStore();
+  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart, toggleMute } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
-  // ... (existing state) ...
+  // Movement State
   const moveForward = useRef(false);
   const moveBackward = useRef(false);
   const moveLeft = useRef(false);
@@ -33,8 +33,6 @@ function PlayerController() {
         camera.position.set(worldX, 1.7, worldZ);
         
         // Calculate direction to center (0,0)
-        // atan2(dx, dz) gives the angle in the XZ plane
-        // We want to look from (worldX, worldZ) to (0,0)
         const dx = 0 - worldX;
         const dz = 0 - worldZ;
         const angle = Math.atan2(dx, dz);
@@ -95,6 +93,9 @@ function PlayerController() {
           break;
         case 'KeyR':
           restart();
+          break;
+        case 'KeyM':
+          toggleMute();
           break;
       }
     };
@@ -176,9 +177,9 @@ function PlayerController() {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY, status, restart]);
+  }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY, status, restart, toggleMute]);
 
-  // Highlight Cursor logic ...
+  // Highlight Cursor logic
   const highlightMesh = useRef<any>(null);
 
   useFrame((_, delta) => {
