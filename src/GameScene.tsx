@@ -26,11 +26,20 @@ function PlayerController() {
   // Teleport to start position
   useEffect(() => {
     if (status === 'playing') {
-        // Offset by -size/2 to match Board's group position
-        camera.position.set(playerStart.x - size / 2, 1.7, playerStart.z - size / 2);
+        const worldX = playerStart.x - size / 2;
+        const worldZ = playerStart.z - size / 2;
         
-        // Look towards the horizon (forward)
-        euler.current.set(0, 0, 0);
+        // Offset by -size/2 to match Board's group position
+        camera.position.set(worldX, 1.7, worldZ);
+        
+        // Calculate direction to center (0,0)
+        // atan2(dx, dz) gives the angle in the XZ plane
+        // We want to look from (worldX, worldZ) to (0,0)
+        const dx = 0 - worldX;
+        const dz = 0 - worldZ;
+        const angle = Math.atan2(dx, dz);
+        
+        euler.current.set(0, angle, 0);
         camera.quaternion.setFromEuler(euler.current);
     }
   }, [playerStart, status, camera, size]);
