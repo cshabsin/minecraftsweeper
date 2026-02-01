@@ -1,13 +1,13 @@
 import { useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { PointerLockControls, Sky } from '@react-three/drei';
-import { Vector2, Vector3, Raycaster } from 'three';
+import { Sky } from '@react-three/drei';
+import { Vector2, Vector3, Raycaster, Euler } from 'three';
 import { Board } from './Board';
 import { useGameStore } from './store';
 
 function PlayerController() {
-  const { camera, scene } = useThree();
-  const { revealCell, toggleFlag, size, grid } = useGameStore();
+  const { camera, scene, gl } = useThree();
+  const { revealCell, toggleFlag, size, grid, settings } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -15,11 +15,47 @@ function PlayerController() {
   const moveBackward = useRef(false);
   const moveLeft = useRef(false);
   const moveRight = useRef(false);
+  const isLocked = useRef(false);
   
   // Center of screen
   const center = new Vector2(0, 0); 
+  
+  // Camera State
+  const euler = useRef(new Euler(0, 0, 0, 'YXZ'));
 
   useEffect(() => {
+    const onMouseMove = (event: MouseEvent) => {
+      if (!isLocked.current) return;
+      
+      const movementX = event.movementX || 0;
+      const movementY = event.movementY || 0;
+      
+      const sensitivity = 0.002;
+      
+      euler.current.setFromQuaternion(camera.quaternion);
+      
+      euler.current.y -= movementX * sensitivity;
+      // Invert Y logic: standard is "up moves up" (subtracting from X rotation).
+      // Invert Y means "up moves down" (adding to X rotation).
+      const invertFactor = settings.invertY ? 1 : -1;
+      euler.current.x += movementY * sensitivity * invertFactor;
+      
+      // Clamp Look Up/Down
+      euler.current.x = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, euler.current.x));
+      
+      camera.quaternion.setFromEuler(euler.current);
+    };
+    
+    const onPointerLockChange = () => {
+      isLocked.current = document.pointerLockElement === gl.domElement;
+    };
+    
+    const onClick = () => {
+        if (!isLocked.current) {
+            gl.domElement.requestPointerLock();
+        }
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.code) {
         case 'ArrowUp':
@@ -63,16 +99,13 @@ function PlayerController() {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (document.pointerLockElement === null) return;
+      if (!isLocked.current) return;
 
       raycaster.current.setFromCamera(center, camera);
       const intersects = raycaster.current.intersectObjects(scene.children, true);
       
       if (intersects.length > 0) {
         const hit = intersects[0];
-        
-        // Nudge the point slightly INTO the block to ensure we select the right one
-        // when clicking a face.
         const point = hit.point.clone();
         if (hit.face) {
           point.addScaledVector(hit.face.normal, -0.01);
@@ -91,24 +124,29 @@ function PlayerController() {
       }
     };
 
-    // Prevent context menu
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
 
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('pointerlockchange', onPointerLockChange);
+    gl.domElement.addEventListener('click', onClick);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('contextmenu', handleContextMenu);
     
     return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('pointerlockchange', onPointerLockChange);
+      gl.domElement.removeEventListener('click', onClick);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [camera, scene, size, revealCell, toggleFlag]);
+  }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY]); // Re-bind if setting changes
 
   useFrame((_, delta) => {
-    if (document.pointerLockElement === null) return;
+    if (!isLocked.current) return;
     
     const speed = 10.0;
     const actualSpeed = speed * delta;
@@ -131,12 +169,8 @@ function PlayerController() {
       .multiplyScalar(actualSpeed)
       .applyEuler(camera.rotation);
 
-    // Collision Detection Function
     const checkCollision = (newPos: Vector3) => {
-      // Player radius (approx)
       const r = 0.2;
-      
-      // Check 4 corners of player bounding box
       const corners = [
         { x: newPos.x + r, z: newPos.z + r },
         { x: newPos.x - r, z: newPos.z + r },
@@ -147,42 +181,26 @@ function PlayerController() {
       for (const corner of corners) {
         const gx = Math.floor(corner.x + size / 2 + 0.5);
         const gz = Math.floor(corner.z + size / 2 + 0.5);
-
-        // Out of bounds is a wall
         if (gx < 0 || gx >= size || gz < 0 || gz >= size) return true;
-
-        // Find cell
-        const cell = grid.find(c => c.x === gx && c.z === gz);
-        
-        // If cell is NOT revealed, it is a wall (solid)
-        // Also check if it's flagged? Flagged usually means "don't dig", but is it solid? 
-        // In our visuals, flagged is a wall.
-        if (cell && !cell.isRevealed) {
-          return true; // Collision!
-        }
+        const idx = gx + gz * size;
+        const cell = grid[idx];
+        if (cell && !cell.isRevealed) return true;
       }
       return false;
     };
 
-    // Move X
     const oldX = camera.position.x;
     camera.position.x += direction.x;
-    if (checkCollision(camera.position)) {
-      camera.position.x = oldX; // Revert if hit
-    }
+    if (checkCollision(camera.position)) camera.position.x = oldX;
 
-    // Move Z
     const oldZ = camera.position.z;
     camera.position.z += direction.z;
-    if (checkCollision(camera.position)) {
-      camera.position.z = oldZ; // Revert if hit
-    }
+    if (checkCollision(camera.position)) camera.position.z = oldZ;
     
-    // Lock Y
     camera.position.y = 1.7;
   });
 
-  return <PointerLockControls />;
+  return null; // No visual component needed
 }
 
 export function GameScene() {

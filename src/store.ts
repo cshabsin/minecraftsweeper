@@ -15,11 +15,15 @@ interface GameState {
   mineCount: number;
   status: 'playing' | 'won' | 'lost';
   flagsPlaced: number;
+  settings: {
+    invertY: boolean;
+  };
   
   initGame: (size: number, mineCount: number) => void;
   revealCell: (x: number, z: number) => void;
   toggleFlag: (x: number, z: number) => void;
   restart: () => void;
+  toggleInvertY: () => void;
 }
 
 // Helper to get array index from x,z
@@ -31,6 +35,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   mineCount: 40,
   status: 'playing',
   flagsPlaced: 0,
+  settings: {
+    invertY: false,
+  },
 
   initGame: (size, mineCount) => {
     const grid: Cell[] = [];
@@ -155,5 +162,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   restart: () => {
     const { size, mineCount, initGame } = get();
     initGame(size, mineCount);
+  },
+
+  toggleInvertY: () => {
+    set(state => ({ settings: { ...state.settings, invertY: !state.settings.invertY } }));
   }
 }));

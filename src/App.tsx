@@ -2,7 +2,7 @@ import { useGameStore } from './store';
 import { GameScene } from './GameScene';
 
 function UI() {
-  const { status, mineCount, flagsPlaced, restart } = useGameStore();
+  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY } = useGameStore();
   const minesLeft = mineCount - flagsPlaced;
 
   return (
@@ -28,7 +28,24 @@ function UI() {
         textShadow: '2px 2px 0 #000'
       }}>
         <span>MINES: {minesLeft}</span>
-        <span>STATUS: {status.toUpperCase()}</span>
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <button 
+            onClick={toggleInvertY}
+            style={{ 
+              pointerEvents: 'auto', 
+              background: 'none', 
+              border: 'none', 
+              color: 'white', 
+              fontFamily: 'inherit', 
+              fontSize: 'inherit', 
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            INVERT Y: {settings.invertY ? 'ON' : 'OFF'}
+          </button>
+          <span>STATUS: {status.toUpperCase()}</span>
+        </div>
       </div>
 
       {/* Crosshair */}
