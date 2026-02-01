@@ -291,15 +291,16 @@ export const useGameStore = create<GameState>()(
     }
   },
 
-      toggleFlag: (x, z) => {
-        const { grid, size, status, flagsPlaced } = get();
-        if (status !== 'playing') return;
-
-        const index = getIndex(x, z, size);
-        const cell = grid[index];
-
-        if (cell.isRevealed) return;
-
+        toggleFlag: (x, z) => {
+          const { grid, size, status, flagsPlaced } = get();
+          if (status !== 'playing') return;
+      
+          const index = getIndex(x, z, size);
+          const cell = grid[index];
+      
+          console.log('toggleFlag', x, z, cell);
+      
+          if (cell.isRevealed) return;
         const newGrid = [...grid];
         newGrid[index] = { ...cell, isFlagged: !cell.isFlagged };
         
