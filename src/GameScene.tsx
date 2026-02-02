@@ -35,9 +35,15 @@ function PlayerController() {
         // Calculate direction to center (0,0)
         const dx = 0 - worldX;
         const dz = 0 - worldZ;
-        const angle = Math.atan2(dx, dz);
+        const angle = Math.atan2(dx, dz); // This gives angle from +Z axis?
         
-        euler.current.set(0, angle, 0);
+        // Camera looks down -Z by default.
+        // We want to rotate so -Z points towards (dx, dz).
+        // atan2(dx, dz) gives angle of vector (dx, dz) relative to (0, 1) i.e. +Z axis (if x is 1st arg).
+        // Wait, atan2(y, x). Here atan2(dx, dz). So x=dz, y=dx.
+        // Angle is relative to DZ axis?
+        // Let's just try adding PI, as we determined we are 180 deg off.
+        euler.current.set(0, angle + Math.PI, 0);
         camera.quaternion.setFromEuler(euler.current);
     }
   }, [playerStart, status, camera, size]);
