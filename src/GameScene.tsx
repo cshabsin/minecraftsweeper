@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene, gl } = useThree();
-  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart, toggleMute } = useGameStore();
+  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart, toggleMute, toggleHelp } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -100,12 +100,13 @@ function PlayerController() {
         case 'Space':
           performRaycastAction('flag');
           break;
-        case 'KeyD':
+        case 'KeyE':
           performRaycastAction('reveal');
           break;
-        case 'Slash': // ? key
-          // toggleHelp(); // Will implement in next task
-          break;
+      }
+      
+      if (event.key === '?' || event.code === 'Slash') {
+          toggleHelp();
       }
     };
 
