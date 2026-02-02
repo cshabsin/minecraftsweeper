@@ -121,10 +121,7 @@ function PlayerController() {
       }
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
-      if (!isLocked.current) return;
-      if (status !== 'playing') return;
-
+    const performRaycastAction = (action: 'reveal' | 'flag') => {
       const { grid: freshGrid, size: freshSize, revealCell, chordCell, toggleFlag } = useGameStore.getState();
 
       raycaster.current.setFromCamera(center, camera);
@@ -145,16 +142,27 @@ function PlayerController() {
            const idx = x + z * freshSize;
            const cell = freshGrid[idx];
            
-           if (e.button === 0) {
+           if (action === 'reveal') {
              if (cell.isRevealed) {
                chordCell(x, z);
              } else {
                revealCell(x, z);
              }
-           } else if (e.button === 2) {
+           } else if (action === 'flag') {
              toggleFlag(x, z);
            }
         }
+      }
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!isLocked.current) return;
+      if (status !== 'playing') return;
+
+      if (e.button === 0) {
+        performRaycastAction('reveal');
+      } else if (e.button === 2) {
+        performRaycastAction('flag');
       }
     };
 
