@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Sky } from '@react-three/drei';
+import { Sky, Environment } from '@react-three/drei';
 import { Vector2, Vector3, Raycaster, Euler } from 'three';
 import { Board } from './Board';
 import { useGameStore } from './store';
@@ -307,6 +307,7 @@ export function GameScene() {
   return (
     <Canvas camera={{ position: [0, 1.7, 0], fov: 75 }}>
       <Sky sunPosition={[100, 20, 100]} />
+      <Environment preset="city" />
       <fog attach="fog" args={[skyBlue, 5, size + 15]} />
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 10, 5]} intensity={1.5} />

@@ -1,5 +1,5 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
-import { InstancedMesh, Object3D, Vector2, CanvasTexture, NearestFilter, LinearFilter } from 'three';
+import { InstancedMesh, Object3D, Vector2, CanvasTexture, NearestFilter, LinearFilter, IcosahedronGeometry } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { useGameStore, Cell } from './store';
 import { createNumberAtlas } from './textures';
@@ -19,9 +19,14 @@ export function Board() {
   // Generate textures once
   const numberAtlas = useMemo(() => createNumberAtlas(), []);
   
-  // Create Bevelled Geometry
+  // Geometries
   const bevelGeom = useMemo(() => {
       return new RoundedBoxGeometry(0.96, 0.96, 0.96, 2, 0.05);
+  }, []);
+  
+  const mineGeom = useMemo(() => {
+      // Radius 0.4, Detail 0 (spiky)
+      return new IcosahedronGeometry(0.4, 0); 
   }, []);
 
   useLayoutEffect(() => {
@@ -87,6 +92,7 @@ export function Board() {
     missedMineMesh.current.instanceMatrix.needsUpdate = true;
     incorrectFlagMesh.current.instanceMatrix.needsUpdate = true;
 
+    // Fix for raycasting issues when count grows from 0
     if (hiddenCount > 0) hiddenMesh.current.computeBoundingSphere();
     if (revealedCount > 0) revealedMesh.current.computeBoundingSphere();
     if (flagCount > 0) flagMesh.current.computeBoundingSphere();
@@ -107,9 +113,9 @@ export function Board() {
         <meshToonMaterial color="#FF4040" /> 
       </instancedMesh>
 
-      {/* Missed Mines (Toon Bevelled Black) */}
-      <instancedMesh ref={missedMineMesh} args={[bevelGeom, undefined, size * size]} frustumCulled={false}>
-        <meshToonMaterial color="#222222" /> 
+      {/* Missed Mines (Metallic Black Icosahedrons) */}
+      <instancedMesh ref={missedMineMesh} args={[mineGeom, undefined, size * size]} frustumCulled={false}>
+        <meshStandardMaterial color="#444444" roughness={0.4} metalness={0.6} /> 
       </instancedMesh>
 
       {/* Incorrect Flags (Toon Bevelled Orange) */}
