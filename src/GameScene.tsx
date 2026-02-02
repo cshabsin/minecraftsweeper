@@ -7,7 +7,7 @@ import { useGameStore } from './store';
 
 function PlayerController() {
   const { camera, scene, gl } = useThree();
-  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart, toggleMute, toggleHelp } = useGameStore();
+  const { revealCell, toggleFlag, chordCell, size, grid, settings, status, playerStart, restart, toggleMute, toggleHelp, isTitleScreen } = useGameStore();
   const raycaster = useRef(new Raycaster());
   
   // Movement State
@@ -68,12 +68,13 @@ function PlayerController() {
     };
     
     const onClick = () => {
-        if (!isLocked.current && status === 'playing') {
+        if (!isLocked.current && status === 'playing' && !isTitleScreen) {
             gl.domElement.requestPointerLock();
         }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTitleScreen) return;
       switch (event.code) {
         case 'ArrowUp':
         case 'KeyW':
@@ -166,8 +167,11 @@ function PlayerController() {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
+      if (isTitleScreen) return;
       if (!isLocked.current) return;
       if (status !== 'playing') return;
+
+      const { grid: freshGrid, size: freshSize, revealCell, chordCell, toggleFlag } = useGameStore.getState();
 
       if (e.button === 0) {
         performRaycastAction('reveal');
@@ -201,7 +205,7 @@ function PlayerController() {
   const highlightMesh = useRef<any>(null);
 
   useFrame((_, delta) => {
-    if (isLocked.current) {
+    if (isLocked.current && !isTitleScreen) {
         const speed = 10.0;
         const actualSpeed = speed * delta;
 

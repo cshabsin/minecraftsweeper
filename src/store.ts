@@ -24,12 +24,14 @@ interface GameState {
   startTime: number;
   endTime: number;
   showHelp: boolean;
+  isTitleScreen: boolean;
   settings: {
     invertY: boolean;
     muted: boolean;
   };
   
   initGame: (size: number, mineCount: number, difficulty: 'easy' | 'medium' | 'hard') => void;
+  startGame: () => void;
   revealCell: (x: number, z: number) => void;
   chordCell: (x: number, z: number) => void;
   toggleFlag: (x: number, z: number) => void;
@@ -57,9 +59,14 @@ export const useGameStore = create<GameState>()(
       startTime: 0,
       endTime: 0,
       showHelp: false,
+      isTitleScreen: true,
       settings: {
         invertY: false,
         muted: false,
+      },
+
+      startGame: () => {
+        set({ isTitleScreen: false });
       },
 
       initGame: (size, mineCount, difficulty) => {

@@ -52,8 +52,79 @@ function HelpModal() {
   );
 }
 
+function TitleScreen() {
+  const { startGame, initGame, difficulty } = useGameStore();
+
+  const setDifficulty = (level: 'easy' | 'medium' | 'hard') => {
+    switch (level) {
+      case 'easy': initGame(10, 10, 'easy'); break;
+      case 'medium': initGame(20, 40, 'medium'); break;
+      case 'hard': initGame(30, 150, 'hard'); break;
+    }
+  };
+
+  const getButtonStyle = (level: 'easy' | 'medium' | 'hard') => ({
+      ...btnStyle,
+      background: difficulty === level ? '#666' : '#444',
+      border: difficulty === level ? '2px solid #4f4' : '1px solid white',
+      fontWeight: difficulty === level ? 'bold' : 'normal',
+      padding: '10px 20px',
+      fontSize: '18px'
+  });
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      background: 'rgba(0,0,0,0.9)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      zIndex: 300,
+      pointerEvents: 'auto',
+      backdropFilter: 'blur(10px)'
+    }}>
+      <h1 style={{ fontSize: '64px', marginBottom: '40px', letterSpacing: '4px', textShadow: '4px 4px 0 #000' }}>
+        MINECRAFTSWEEPER
+      </h1>
+      
+      <div style={{ marginBottom: '40px', display: 'flex', gap: '20px' }}>
+          <button onClick={() => setDifficulty('easy')} style={getButtonStyle('easy')}>EASY</button>
+          <button onClick={() => setDifficulty('medium')} style={getButtonStyle('medium')}>MEDIUM</button>
+          <button onClick={() => setDifficulty('hard')} style={getButtonStyle('hard')}>HARD</button>
+      </div>
+
+      <button 
+        onClick={startGame}
+        style={{
+          fontSize: '32px',
+          padding: '20px 60px',
+          cursor: 'pointer',
+          background: '#4CAF50',
+          color: 'white',
+          border: '2px solid white',
+          borderRadius: '8px',
+          marginBottom: '40px'
+        }}
+      >
+        PLAY
+      </button>
+
+      <div style={{ fontFamily: 'monospace', textAlign: 'center', lineHeight: '1.5', opacity: 0.8 }}>
+        <p>WASD to Move &nbsp;|&nbsp; Mouse to Look</p>
+        <p>Space to Dig &nbsp;|&nbsp; F to Flag</p>
+      </div>
+    </div>
+  );
+}
+
 function UI() {
-  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, toggleMute, toggleHelp, showHelp, initGame, startTime, endTime, difficulty, bestTimes } = useGameStore();
+  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, toggleMute, toggleHelp, showHelp, isTitleScreen, initGame, startTime, endTime, difficulty, bestTimes } = useGameStore();
   const minesLeft = mineCount - flagsPlaced;
   const [now, setNow] = useState(Date.now());
 
@@ -62,6 +133,10 @@ function UI() {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [status]);
+
+  if (isTitleScreen) {
+      return <TitleScreen />;
+  }
 
   const setDifficulty = (level: 'easy' | 'medium' | 'hard') => {
     switch (level) {
