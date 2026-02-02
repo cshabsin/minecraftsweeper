@@ -135,13 +135,6 @@ function UI() {
             >
               {settings.muted ? '🔇' : '🔊'}
             </button>
-            <button 
-              onClick={toggleHelp}
-              style={{ ...btnStyle, width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
-              title="Help (?)"
-            >
-              ?
-            </button>
         </div>
         
         <div style={{ display: 'flex', gap: '20px' }}>
@@ -228,7 +221,7 @@ function UI() {
         textAlign: 'center',
         pointerEvents: 'none'
       }}>
-        WASD to Move | Click to Lock Mouse | Left Click: Dig | Right Click: Flag
+        WASD Move | Click to Lock | Space: Dig | F: Flag | ? Keybindings
       </div>
     </div>
   );
