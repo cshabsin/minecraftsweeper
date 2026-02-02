@@ -180,7 +180,11 @@ function PlayerController() {
       const { grid: freshGrid, size: freshSize, revealCell, chordCell, toggleFlag } = useGameStore.getState();
 
       if (e.button === 0) {
-        performRaycastAction('reveal');
+        if (e.ctrlKey) {
+            performRaycastAction('flag');
+        } else {
+            performRaycastAction('reveal');
+        }
       } else if (e.button === 2) {
         performRaycastAction('flag');
       }

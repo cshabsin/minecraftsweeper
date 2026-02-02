@@ -273,6 +273,7 @@ export const useGameStore = create<GameState>()(
         // 2. Animate the reveal layer by layer
         const runAnimation = async () => {
           for (let i = 0; i < layers.length; i++) {
+            if (i > 0) sounds.dig();
             const layer = layers[i];
 
             set((state) => {
