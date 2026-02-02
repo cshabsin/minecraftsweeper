@@ -199,7 +199,7 @@ function PlayerController() {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY, status, restart, toggleMute]);
+  }, [camera, scene, size, revealCell, toggleFlag, gl, settings.invertY, status, restart, toggleMute, toggleHelp, isTitleScreen]);
 
   // Highlight Cursor logic
   const highlightMesh = useRef<any>(null);
