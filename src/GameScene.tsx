@@ -97,6 +97,15 @@ function PlayerController() {
         case 'KeyM':
           toggleMute();
           break;
+        case 'Space':
+          performRaycastAction('flag');
+          break;
+        case 'KeyD':
+          performRaycastAction('reveal');
+          break;
+        case 'Slash': // ? key
+          // toggleHelp(); // Will implement in next task
+          break;
       }
     };
 
