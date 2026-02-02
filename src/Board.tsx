@@ -1,5 +1,5 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
-import { InstancedMesh, Object3D, Vector2, CanvasTexture, NearestFilter, LinearFilter, IcosahedronGeometry } from 'three';
+import { InstancedMesh, Object3D, Vector2, CanvasTexture, NearestFilter, LinearFilter, IcosahedronGeometry, CylinderGeometry, ConeGeometry, BoxGeometry } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { useGameStore, Cell } from './store';
 import { createNumberAtlas } from './textures';
@@ -12,7 +12,9 @@ export function Board() {
   // Refs for the layers
   const hiddenMesh = useRef<InstancedMesh>(null);
   const revealedMesh = useRef<InstancedMesh>(null);
-  const flagMesh = useRef<InstancedMesh>(null);
+  const flagBaseMesh = useRef<InstancedMesh>(null);
+  const poleMesh = useRef<InstancedMesh>(null);
+  const triangleMesh = useRef<InstancedMesh>(null);
   const missedMineMesh = useRef<InstancedMesh>(null);
   const incorrectFlagMesh = useRef<InstancedMesh>(null);
 
@@ -25,22 +27,28 @@ export function Board() {
   }, []);
   
   const mineGeom = useMemo(() => {
-      // Radius 0.4, Detail 0 (spiky)
       return new IcosahedronGeometry(0.4, 0); 
   }, []);
 
+  const poleGeom = useMemo(() => new CylinderGeometry(0.02, 0.02, 0.6), []);
+  // Triangular prism (Short) -> Stretched to be pennant
+  const flagGeom = useMemo(() => new CylinderGeometry(0.2, 0.2, 0.05, 3), []); 
+  const revealedGeom = useMemo(() => new BoxGeometry(1, 1, 1), []);
+
   useLayoutEffect(() => {
-    if (!hiddenMesh.current || !revealedMesh.current || !flagMesh.current || !missedMineMesh.current || !incorrectFlagMesh.current) return;
+    if (!hiddenMesh.current || !revealedMesh.current || !flagBaseMesh.current || !poleMesh.current || !triangleMesh.current || !missedMineMesh.current || !incorrectFlagMesh.current) return;
 
     let hiddenCount = 0;
     let revealedCount = 0;
-    let flagCount = 0;
+    let flagBaseCount = 0;
+    let poleCount = 0;
+    let triangleCount = 0;
     let missedCount = 0;
     let incorrectCount = 0;
 
     grid.forEach((cell) => {
-      o.position.set(cell.x, 0, cell.z);
-      o.updateMatrix();
+      o.rotation.set(0, 0, 0);
+      o.scale.set(1, 1, 1);
 
       if (cell.isRevealed) {
         if (!cell.isMine) {
@@ -51,7 +59,7 @@ export function Board() {
             revealedCount++;
         }
       } else {
-        // Position Wall
+        // Wall position
         o.position.set(cell.x, 0.5, cell.z);
         o.scale.set(1, 1, 1);
         o.updateMatrix();
@@ -62,17 +70,36 @@ export function Board() {
             incorrectFlagMesh.current!.setMatrixAt(incorrectCount, o.matrix);
             incorrectCount++;
           } else {
-            // Correct Flag (or playing)
-            flagMesh.current!.setMatrixAt(flagCount, o.matrix);
-            flagCount++;
+            // Correct Flag -> Pink Base Block
+            flagBaseMesh.current!.setMatrixAt(flagBaseCount, o.matrix);
+            flagBaseCount++;
           }
+          
+          // Pole
+          o.position.set(cell.x, 1.0, cell.z);
+          o.scale.set(1, 1, 1);
+          o.updateMatrix();
+          poleMesh.current!.setMatrixAt(poleCount, o.matrix);
+          poleCount++;
+          
+          // Triangle (Flat Prism Pennant)
+          o.position.set(cell.x + 0.1, 1.35, cell.z); 
+          o.rotation.x = Math.PI / 2;
+          o.rotation.y = Math.PI / 2;
+          o.rotation.z = 0;
+          o.scale.set(1, 1, 1.4); 
+          
+          o.updateMatrix();
+          triangleMesh.current!.setMatrixAt(triangleCount, o.matrix);
+          triangleCount++;
+          o.rotation.set(0, 0, 0);
+          o.scale.set(1, 1, 1);
+          
         } else {
           if (status === 'lost' && cell.isMine) {
-            // Missed Mine
             missedMineMesh.current!.setMatrixAt(missedCount, o.matrix);
             missedCount++;
           } else {
-            // Hidden safe block (or playing)
             hiddenMesh.current!.setMatrixAt(hiddenCount, o.matrix);
             hiddenCount++;
           }
@@ -82,20 +109,25 @@ export function Board() {
 
     hiddenMesh.current.count = hiddenCount;
     revealedMesh.current.count = revealedCount; 
-    flagMesh.current.count = flagCount;
+    flagBaseMesh.current.count = flagBaseCount;
+    poleMesh.current.count = poleCount;
+    triangleMesh.current.count = triangleCount;
     missedMineMesh.current.count = missedCount;
     incorrectFlagMesh.current.count = incorrectCount;
 
     hiddenMesh.current.instanceMatrix.needsUpdate = true;
     revealedMesh.current.instanceMatrix.needsUpdate = true;
-    flagMesh.current.instanceMatrix.needsUpdate = true;
+    flagBaseMesh.current.instanceMatrix.needsUpdate = true;
+    poleMesh.current.instanceMatrix.needsUpdate = true;
+    triangleMesh.current.instanceMatrix.needsUpdate = true;
     missedMineMesh.current.instanceMatrix.needsUpdate = true;
     incorrectFlagMesh.current.instanceMatrix.needsUpdate = true;
 
-    // Fix for raycasting issues when count grows from 0
     if (hiddenCount > 0) hiddenMesh.current.computeBoundingSphere();
     if (revealedCount > 0) revealedMesh.current.computeBoundingSphere();
-    if (flagCount > 0) flagMesh.current.computeBoundingSphere();
+    if (flagBaseCount > 0) flagBaseMesh.current.computeBoundingSphere();
+    if (poleCount > 0) poleMesh.current.computeBoundingSphere();
+    if (triangleCount > 0) triangleMesh.current.computeBoundingSphere();
     if (missedCount > 0) missedMineMesh.current.computeBoundingSphere();
     if (incorrectCount > 0) incorrectFlagMesh.current.computeBoundingSphere();
 
@@ -108,9 +140,19 @@ export function Board() {
         <meshToonMaterial color="#bdbdbd" /> 
       </instancedMesh>
 
-      {/* Flagged Blocks (Toon Bevelled Red) */}
-      <instancedMesh ref={flagMesh} args={[bevelGeom, undefined, size * size]} frustumCulled={false}>
-        <meshToonMaterial color="#FF4040" /> 
+      {/* Flag Base Blocks (Toon Bevelled Pink) */}
+      <instancedMesh ref={flagBaseMesh} args={[bevelGeom, undefined, size * size]} frustumCulled={false}>
+        <meshToonMaterial color="#e8a8b8" /> 
+      </instancedMesh>
+
+      {/* Flag Poles (Black) */}
+      <instancedMesh ref={poleMesh} args={[poleGeom, undefined, size * size]} frustumCulled={false}>
+        <meshStandardMaterial color="#222" /> 
+      </instancedMesh>
+
+      {/* Flag Triangles (Red Prism) */}
+      <instancedMesh ref={triangleMesh} args={[flagGeom, undefined, size * size]} frustumCulled={false}>
+        <meshStandardMaterial color="#FF0000" /> 
       </instancedMesh>
 
       {/* Missed Mines (Metallic Black Icosahedrons) */}
@@ -124,8 +166,7 @@ export function Board() {
       </instancedMesh>
 
       {/* Revealed Floor (Stone) */}
-      <instancedMesh ref={revealedMesh} args={[undefined, undefined, size * size]} frustumCulled={false}>
-        <boxGeometry args={[1, 1, 1]} />
+      <instancedMesh ref={revealedMesh} args={[revealedGeom, undefined, size * size]} frustumCulled={false}>
         <meshStandardMaterial color="#808080" /> 
       </instancedMesh>
       
