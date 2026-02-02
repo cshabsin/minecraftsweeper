@@ -23,6 +23,7 @@ interface GameState {
   explodedMine: number | null;
   startTime: number;
   endTime: number;
+  showHelp: boolean;
   settings: {
     invertY: boolean;
     muted: boolean;
@@ -35,6 +36,7 @@ interface GameState {
   restart: () => void;
   toggleInvertY: () => void;
   toggleMute: () => void;
+  toggleHelp: () => void;
 }
 
 // Helper to get array index from x,z
@@ -54,6 +56,7 @@ export const useGameStore = create<GameState>()(
       explodedMine: null,
       startTime: 0,
       endTime: 0,
+      showHelp: false,
       settings: {
         invertY: false,
         muted: false,
@@ -383,6 +386,10 @@ export const useGameStore = create<GameState>()(
 
       toggleMute: () => {
         set(state => ({ settings: { ...state.settings, muted: !state.settings.muted } }));
+      },
+
+      toggleHelp: () => {
+        set(state => ({ showHelp: !state.showHelp }));
       }
     }),
     {

@@ -2,8 +2,58 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from './store';
 import { GameScene } from './GameScene';
 
+function KeyCap({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{
+      border: '1px solid white',
+      borderRadius: '4px',
+      padding: '2px 6px',
+      background: '#444',
+      fontFamily: 'monospace',
+      margin: '0 4px'
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function HelpModal() {
+  const { toggleHelp } = useGameStore();
+  return (
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      background: 'rgba(0,0,0,0.9)',
+      padding: '40px',
+      border: '2px solid white',
+      color: 'white',
+      textAlign: 'left',
+      pointerEvents: 'auto',
+      zIndex: 200,
+      minWidth: '300px'
+    }}>
+      <h2 style={{ textAlign: 'center', marginTop: 0 }}>CONTROLS</h2>
+      <ul style={{ listStyle: 'none', padding: 0, lineHeight: '2' }}>
+        <li><KeyCap>W</KeyCap><KeyCap>A</KeyCap><KeyCap>S</KeyCap><KeyCap>D</KeyCap> Move</li>
+        <li><KeyCap>Mouse</KeyCap> Look</li>
+        <li><KeyCap>L-Click</KeyCap> / <KeyCap>D</KeyCap> Dig</li>
+        <li><KeyCap>R-Click</KeyCap> / <KeyCap>Space</KeyCap> Flag</li>
+        <li><KeyCap>M</KeyCap> Mute</li>
+        <li><KeyCap>R</KeyCap> Restart</li>
+        <li><KeyCap>?</KeyCap> Help</li>
+        <li><KeyCap>Esc</KeyCap> Unlock Mouse</li>
+      </ul>
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <button onClick={toggleHelp} style={btnStyle}>CLOSE</button>
+      </div>
+    </div>
+  );
+}
+
 function UI() {
-  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, toggleMute, initGame, startTime, endTime, difficulty, bestTimes } = useGameStore();
+  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, toggleMute, toggleHelp, showHelp, initGame, startTime, endTime, difficulty, bestTimes } = useGameStore();
   const minesLeft = mineCount - flagsPlaced;
   const [now, setNow] = useState(Date.now());
 
@@ -85,6 +135,13 @@ function UI() {
             >
               {settings.muted ? '🔇' : '🔊'}
             </button>
+            <button 
+              onClick={toggleHelp}
+              style={{ ...btnStyle, width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+              title="Help (?)"
+            >
+              ?
+            </button>
         </div>
         
         <div style={{ display: 'flex', gap: '20px' }}>
@@ -102,6 +159,8 @@ function UI() {
           <span>STATUS: {status.toUpperCase()}</span>
         </div>
       </div>
+
+      {showHelp && <HelpModal />}
 
       {/* Crosshair */}
       <div style={{
