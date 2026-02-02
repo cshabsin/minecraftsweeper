@@ -97,10 +97,10 @@ function PlayerController() {
         case 'KeyM':
           toggleMute();
           break;
-        case 'Space':
+        case 'KeyF':
           performRaycastAction('flag');
           break;
-        case 'KeyE':
+        case 'Space':
           performRaycastAction('reveal');
           break;
       }
