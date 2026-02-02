@@ -38,8 +38,8 @@ function HelpModal() {
       <ul style={{ listStyle: 'none', padding: 0, lineHeight: '2' }}>
         <li><KeyCap>W</KeyCap><KeyCap>A</KeyCap><KeyCap>S</KeyCap><KeyCap>D</KeyCap> Move</li>
         <li><KeyCap>Mouse</KeyCap> Look</li>
-        <li><KeyCap>L-Click</KeyCap> / <KeyCap>E</KeyCap> Dig</li>
-        <li><KeyCap>R-Click</KeyCap> / <KeyCap>Space</KeyCap> Flag</li>
+        <li><KeyCap>L-Click</KeyCap> / <KeyCap>Space</KeyCap> Dig</li>
+        <li><KeyCap>R-Click</KeyCap> / <KeyCap>F</KeyCap> Flag</li>
         <li><KeyCap>M</KeyCap> Mute</li>
         <li><KeyCap>R</KeyCap> Restart</li>
         <li><KeyCap>?</KeyCap> Help</li>
