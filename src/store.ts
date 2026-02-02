@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { sounds } from './audio';
 
 export interface Cell {
   x: number;
@@ -24,6 +25,7 @@ interface GameState {
   endTime: number;
   settings: {
     invertY: boolean;
+    muted: boolean;
   };
   
   initGame: (size: number, mineCount: number, difficulty: 'easy' | 'medium' | 'hard') => void;
@@ -32,6 +34,7 @@ interface GameState {
   toggleFlag: (x: number, z: number) => void;
   restart: () => void;
   toggleInvertY: () => void;
+  toggleMute: () => void;
 }
 
 // Helper to get array index from x,z
@@ -53,6 +56,7 @@ export const useGameStore = create<GameState>()(
       endTime: 0,
       settings: {
         invertY: false,
+        muted: false,
       },
 
       initGame: (size, mineCount, difficulty) => {
@@ -215,6 +219,7 @@ export const useGameStore = create<GameState>()(
         if (cell.isMine) {
           const newGrid = [...grid];
           newGrid[index] = { ...cell, isRevealed: true };
+          sounds.explode();
           set({ grid: newGrid, status: 'lost', explodedMine: index, endTime: Date.now() });
           return;
         }
@@ -222,6 +227,7 @@ export const useGameStore = create<GameState>()(
         // Reveal Logic (Flood Fill)
         const newGrid = [...grid];
         const stack = [index];
+        let revealedCount = 0;
 
         while (stack.length > 0) {
           const currIdx = stack.pop()!;
@@ -230,6 +236,7 @@ export const useGameStore = create<GameState>()(
           if (curr.isRevealed || curr.isFlagged) continue;
 
           newGrid[currIdx] = { ...curr, isRevealed: true };
+          revealedCount++;
 
           // If it's a "0", reveal neighbors
           if (curr.neighborMines === 0) {
@@ -249,6 +256,8 @@ export const useGameStore = create<GameState>()(
           }
         }
 
+        if (revealedCount > 0) sounds.dig();
+
         // Check Win Condition
         const hiddenNonMines = newGrid.filter(c => !c.isMine && !c.isRevealed).length;
         const newStatus = hiddenNonMines === 0 ? 'won' : 'playing';
@@ -256,6 +265,7 @@ export const useGameStore = create<GameState>()(
         
         let newBestTimes = bestTimes;
         if (newStatus === 'won') {
+            sounds.win();
             const time = endTime - startTime;
             if (bestTimes[difficulty] === null || time < bestTimes[difficulty]!) {
                 newBestTimes = { ...bestTimes, [difficulty]: time };
@@ -319,6 +329,7 @@ export const useGameStore = create<GameState>()(
         const newGrid = [...grid];
         newGrid[index] = { ...cell, isFlagged: !cell.isFlagged };
         
+        sounds.flag();
         set({ 
           grid: newGrid, 
           flagsPlaced: flagsPlaced + (newGrid[index].isFlagged ? 1 : -1) 
@@ -332,6 +343,10 @@ export const useGameStore = create<GameState>()(
 
       toggleInvertY: () => {
         set(state => ({ settings: { ...state.settings, invertY: !state.settings.invertY } }));
+      },
+
+      toggleMute: () => {
+        set(state => ({ settings: { ...state.settings, muted: !state.settings.muted } }));
       }
     }),
     {

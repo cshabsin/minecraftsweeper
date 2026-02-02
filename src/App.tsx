@@ -3,7 +3,7 @@ import { useGameStore } from './store';
 import { GameScene } from './GameScene';
 
 function UI() {
-  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, initGame, startTime, endTime, difficulty, bestTimes } = useGameStore();
+  const { status, mineCount, flagsPlaced, restart, settings, toggleInvertY, toggleMute, initGame, startTime, endTime, difficulty, bestTimes } = useGameStore();
   const minesLeft = mineCount - flagsPlaced;
   const [now, setNow] = useState(Date.now());
 
@@ -75,9 +75,16 @@ function UI() {
           <button onClick={() => setDifficulty('hard')} style={getButtonStyle('hard')}>{getButtonText('hard', 'HARD')}</button>
         </div>
         
-        <div style={{ display: 'flex', gap: '40px' }}>
+        <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
             <span>MINES: {minesLeft}</span>
             <span>TIME: {displayTime}</span>
+            <button 
+              onClick={toggleMute}
+              style={{ ...btnStyle, fontSize: '24px', background: 'none', border: 'none' }}
+              title="Toggle Mute (M)"
+            >
+              {settings.muted ? '🔇' : '🔊'}
+            </button>
         </div>
         
         <div style={{ display: 'flex', gap: '20px' }}>
