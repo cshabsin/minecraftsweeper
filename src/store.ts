@@ -224,19 +224,19 @@ export const useGameStore = create<GameState>()(
           return;
         }
 
-        // Reveal Logic (Flood Fill)
-        const newGrid = [...grid];
-        const stack = [index];
-        let revealedCount = 0;
+        // Reveal Logic (BFS for Cascade)
+        // 1. Calculate which cells need to be revealed and group them by distance (layers)
+        const layers: number[][] = [];
+        const visited = new Set<number>();
+        const queue: { idx: number; dist: number }[] = [{ idx: index, dist: 0 }];
+        visited.add(index);
 
-        while (stack.length > 0) {
-          const currIdx = stack.pop()!;
-          const curr = newGrid[currIdx];
+        while (queue.length > 0) {
+          const { idx, dist } = queue.shift()!;
+          if (!layers[dist]) layers[dist] = [];
+          layers[dist].push(idx);
 
-          if (curr.isRevealed || curr.isFlagged) continue;
-
-          newGrid[currIdx] = { ...curr, isRevealed: true };
-          revealedCount++;
+          const curr = grid[idx];
 
           // If it's a "0", reveal neighbors
           if (curr.neighborMines === 0) {
@@ -247,8 +247,10 @@ export const useGameStore = create<GameState>()(
                 const nz = curr.z + dz;
                 if (nx >= 0 && nx < size && nz >= 0 && nz < size) {
                   const neighborIdx = getIndex(nx, nz, size);
-                  if (!newGrid[neighborIdx].isRevealed) {
-                    stack.push(neighborIdx);
+                  const neighbor = grid[neighborIdx];
+                  if (!neighbor.isRevealed && !neighbor.isFlagged && !visited.has(neighborIdx)) {
+                    visited.add(neighborIdx);
+                    queue.push({ idx: neighborIdx, dist: dist + 1 });
                   }
                 }
               }
@@ -256,23 +258,57 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        if (revealedCount > 0) sounds.dig();
+        if (visited.size > 0) sounds.dig();
 
-        // Check Win Condition
-        const hiddenNonMines = newGrid.filter(c => !c.isMine && !c.isRevealed).length;
-        const newStatus = hiddenNonMines === 0 ? 'won' : 'playing';
-        const endTime = newStatus !== 'playing' ? Date.now() : 0;
-        
-        let newBestTimes = bestTimes;
-        if (newStatus === 'won') {
-            sounds.win();
-            const time = endTime - startTime;
-            if (bestTimes[difficulty] === null || time < bestTimes[difficulty]!) {
-                newBestTimes = { ...bestTimes, [difficulty]: time };
+        // 2. Animate the reveal layer by layer
+        const runAnimation = async () => {
+          for (let i = 0; i < layers.length; i++) {
+            const layer = layers[i];
+
+            set((state) => {
+              const newGrid = [...state.grid];
+              let changed = false;
+
+              for (const idx of layer) {
+                const c = newGrid[idx];
+                if (!c.isRevealed && !c.isFlagged) {
+                  newGrid[idx] = { ...c, isRevealed: true };
+                  changed = true;
+                }
+              }
+
+              if (!changed) return state;
+
+              // Check Win Condition
+              const hiddenNonMines = newGrid.filter((c) => !c.isMine && !c.isRevealed).length;
+              const newStatus = hiddenNonMines === 0 ? 'won' : state.status;
+              const endTime = newStatus !== 'playing' && state.status === 'playing' ? Date.now() : state.endTime;
+
+              let newBestTimes = state.bestTimes;
+              if (newStatus === 'won' && state.status !== 'won') {
+                sounds.win();
+                const time = endTime - state.startTime;
+                if (state.bestTimes[state.difficulty] === null || time < state.bestTimes[state.difficulty]!) {
+                  newBestTimes = { ...state.bestTimes, [state.difficulty]: time };
+                }
+              }
+
+              return {
+                grid: newGrid,
+                status: newStatus,
+                bestTimes: newBestTimes,
+                ...(endTime ? { endTime } : {}),
+              };
+            });
+
+            // Delay for cascade effect (very fast)
+            if (i < layers.length - 1) {
+              await new Promise((resolve) => setTimeout(resolve, 20));
             }
-        }
+          }
+        };
 
-        set({ grid: newGrid, status: newStatus, bestTimes: newBestTimes, ...(endTime ? { endTime } : {}) });
+        runAnimation();
       },
 
       chordCell: (x, z) => {
